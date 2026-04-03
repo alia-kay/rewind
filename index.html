@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tonight?</title>
+  <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            navy:        '#1a1a2e',
+            'navy-mid':  '#22223d',
+            'navy-card': '#252542',
+            terra:       '#c4714f',
+            'terra-dk':  '#a35a3a',
+            'terra-lt':  '#e8987a',
+            cream:       '#f5efe6',
+            'cream-dk':  '#ddd3c4',
+            gold:        '#d4a853',
+            'gold-lt':   '#e8c878',
+          },
+          fontFamily: {
+            serif: ['Lora', 'Georgia', 'serif'],
+            sans:  ['Inter', 'system-ui', 'sans-serif'],
+          },
+        }
+      }
+    }
+  </script>
+  <style>
+    body { background-color: #1a1a2e; }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fadeDown {
+      from { opacity: 1; transform: translateY(0); }
+      to   { opacity: 0; transform: translateY(-14px); }
+    }
+    @keyframes pulse-soft {
+      0%, 100% { opacity: 0.3; }
+      50%       { opacity: 0.7; }
+    }
+
+    .fade-in  { animation: fadeUp   0.45s cubic-bezier(0.22,1,0.36,1) both; }
+    .fade-out { animation: fadeDown 0.28s ease-in both; }
+    .pulsing  { animation: pulse-soft 1.4s ease-in-out infinite; }
+
+    /* Remove tap highlight on mobile */
+    button { -webkit-tap-highlight-color: transparent; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef, useCallback } = React;
+
+    // ─────────────────────────────────────────────
+    //  QUESTION DEFINITIONS
+    // ─────────────────────────────────────────────
+    const QUESTIONS = [
+      {
+        id: 'energy',
+        q: "How's your body feeling right now?",
+        options: [
+          { value: 'drained',  emoji: '🪫', label: 'Completely drained' },
+          { value: 'tired',    emoji: '😴', label: 'Tired but okay' },
+          { value: 'neutral',  emoji: '😐', label: 'Neutral' },
+          { value: 'good',     emoji: '✨', label: 'Surprisingly good' },
+        ],
+      },
+      {
+        id: 'mental',
+        q: "How's your head tonight?",
+        options: [
+          { value: 'overstimulated', emoji: '🌀', label: "Overstimulated / can't stop thinking" },
+          { value: 'foggy',          emoji: '🌫️',  label: 'Foggy and kind of blank' },
+          { value: 'clear',          emoji: '🙂', label: 'Clear enough' },
+        ],
+      },
+      {
+        id: 'social',
+        q: 'Do you want to include your husband?',
+        options: [
+          { value: 'together', emoji: '💑', label: "Yes, let's do something together" },
+          { value: 'solo',     emoji: '👤', label: 'I need some solo time' },
+          { value: 'either',   emoji: '🤷', label: 'Either works for me' },
+        ],
+      },
+      {
+        id: 'creative',
+        q: 'Any urge to make or create something?',
+        options: [
+          { value: 'hands',   emoji: '🎨', label: 'Yes — I want to use my hands' },
+          { value: 'absorb',  emoji: '📖', label: 'No — I want to absorb something' },
+          { value: 'zoneout', emoji: '🌀', label: 'I just want to zone out a little' },
+        ],
+      },
+      {
+        id: 'time',
+        q: 'How much time do you have?',
+        options: [
+          { value: '1hr', emoji: '⚡',  label: 'About 1 hour' },
+          { value: '2hr', emoji: '🌙',  label: 'About 2 hours' },
+          { value: '3hr', emoji: '🌌',  label: 'The full 3 hours' },
+        ],
+      },
+    ];
+
+    // ─────────────────────────────────────────────
+    //  ACTIVITY LIBRARY
+    // ─────────────────────────────────────────────
+    const ACTIVITIES = [
+      {
+        id: 'series',
+        name: 'Watch a series',
+        emoji: '📺',
+        description: "Sink into a show you love — or finally start one you've been saving. A great series is one of life's quiet pleasures.",
+        starter: "Try something comforting you've already seen before, or start a buzzy new drama. The rule: something you're actually excited about, not just whatever's queued.",
+        social:   ['solo', 'together', 'either'],
+        creative: ['zoneout', 'absorb'],
+        energy:   ['drained', 'tired', 'neutral', 'good'],
+        mental:   ['foggy', 'clear'],
+        minTime:  0.75,
+      },
+      {
+        id: 'fiction',
+        name: 'Read fiction',
+        emoji: '📚',
+        description: "Disappear into another world entirely. Fiction is one of the best ways to quiet an active mind and feed a dormant one.",
+        starter: "Grab whatever you're in the middle of, or pick a short story collection if you can't commit. Even 30 pages is a real gift to yourself.",
+        social:   ['solo', 'either'],
+        creative: ['absorb'],
+        energy:   ['drained', 'tired', 'neutral', 'good'],
+        mental:   ['foggy', 'overstimulated', 'clear'],
+        minTime:  0.5,
+      },
+      {
+        id: 'nonfiction',
+        name: 'Read non-fiction',
+        emoji: '🧠',
+        description: "One chapter of something you're genuinely curious about — not self-help you feel obligated to read, but something that actually interests you.",
+        starter: "Keep it to one chapter and let yourself stop when you're full. Non-fiction is best without pressure.",
+        social:   ['solo', 'either'],
+        creative: ['absorb'],
+        energy:   ['neutral', 'good'],
+        mental:   ['clear'],
+        minTime:  0.5,
+      },
+      {
+        id: 'clay',
+        name: 'Make something with clay',
+        emoji: '🏺',
+        description: "Therapeutic, tactile, completely absorbing. Working with your hands is one of the fastest ways out of your head.",
+        starter: "No plan needed — just start with a small pinch pot and let your hands figure it out. The process is the whole point.",
+        social:   ['solo', 'either'],
+        creative: ['hands'],
+        energy:   ['tired', 'neutral', 'good'],
+        mental:   ['overstimulated', 'clear'],
+        minTime:  0.5,
+      },
+      {
+        id: 'podcast',
+        name: 'Listen to a podcast',
+        emoji: '🎧',
+        description: "Something interesting or funny in your ears while you do literally nothing else. Guilt-free, low-effort, and often surprisingly comforting.",
+        starter: "Try a long-form interview: Conan O'Brien Needs a Friend, Armchair Expert, or Lex Fridman. Or whatever comfort topic you love.",
+        social:   ['solo', 'either'],
+        creative: ['absorb', 'zoneout'],
+        energy:   ['drained', 'tired', 'neutral', 'good'],
+        mental:   ['foggy', 'clear'],
+        minTime:  0.5,
+      },
+      {
+        id: 'interview',
+        name: 'Watch a long interview',
+        emoji: '🎙️',
+        description: "Long-form conversation with someone fascinating feels like eavesdropping on the best dinner party. Absorbing without being demanding.",
+        starter: "YouTube: Hot Ones, Diary of a CEO, or 80,000 Hours podcast videos. Pick someone who genuinely interests you, not just someone you feel you should watch.",
+        social:   ['solo', 'either'],
+        creative: ['absorb'],
+        energy:   ['tired', 'neutral', 'good'],
+        mental:   ['foggy', 'clear'],
+        minTime:  0.75,
+      },
+      {
+        id: 'husband-games',
+        name: 'Watch your husband play video games',
+        emoji: '🎮',
+        description: "Cozy up together with zero pressure to participate. Just vibes, easy commentary, and quiet company.",
+        starter: "Get your snacks sorted and ask him to pick something cinematic or story-driven — games are so much better to watch that way.",
+        social:   ['together', 'either'],
+        creative: ['zoneout'],
+        energy:   ['drained', 'tired', 'neutral'],
+        mental:   ['foggy', 'overstimulated'],
+        minTime:  0.5,
+      },
+      {
+        id: 'board-games',
+        name: 'Play a board game',
+        emoji: '🎲',
+        description: "Actual quality time with your husband — laughing, competing a little, being genuinely playful together. Underrated as a date night.",
+        starter: "Keep it light: Ticket to Ride, Codenames, Exploding Kittens, or even just a card game. Set a timer so it doesn't drag.",
+        social:   ['together'],
+        creative: ['absorb', 'hands'],
+        energy:   ['neutral', 'good'],
+        mental:   ['clear'],
+        minTime:  1,
+      },
+      {
+        id: 'movie',
+        name: 'Watch a movie with your husband',
+        emoji: '🎬',
+        description: "A proper movie night — not half-watching while on your phones, but actually sitting down together with snacks for something good.",
+        starter: "Take turns picking. Go for something 90–100 minutes max — comedy or thriller tend to hold attention best after a long day.",
+        social:   ['together'],
+        creative: ['absorb', 'zoneout'],
+        energy:   ['drained', 'tired', 'neutral', 'good'],
+        mental:   ['foggy', 'clear'],
+        minTime:  1.5,
+      },
+      {
+        id: 'yoga',
+        name: 'Gentle yoga or stretching',
+        emoji: '🧘‍♀️',
+        description: "Your body has been in mom-mode all day. A slow, gentle stretch session will unwind the tension you didn't even know you were carrying.",
+        starter: "Search YouTube for 'evening yoga for tired moms' or 'yin yoga 30 minutes.' Adriene Mishler's channel is free and perfect for this.",
+        social:   ['solo', 'either'],
+        creative: ['zoneout', 'absorb'],
+        energy:   ['drained', 'tired', 'neutral'],
+        mental:   ['overstimulated', 'foggy', 'clear'],
+        minTime:  0.5,
+      },
+      {
+        id: 'journal',
+        name: 'Journal with a prompt',
+        emoji: '✍️',
+        description: "Five focused minutes to empty your head onto paper. You don't need to be a 'journal person' — just let the words come without editing.",
+        starter: '"What am I actually feeling right now?" / "What was one beautiful thing today?" / "What do I need more of this week?" Pick one and go.',
+        social:   ['solo', 'either'],
+        creative: ['hands'],
+        energy:   ['drained', 'tired', 'neutral', 'good'],
+        mental:   ['overstimulated', 'foggy', 'clear'],
+        minTime:  0.25,
+      },
+      {
+        id: 'doodle',
+        name: 'Sketchbook doodling',
+        emoji: '🎨',
+        description: "No goal, no skill required — just a pen and paper. Doodling is meditative in the best way: your hands stay busy, your mind slows down.",
+        starter: "Fill a page with one repeated shape, draw something in front of you, or follow your pen wherever it goes. Put on music. Disappear.",
+        social:   ['solo', 'either'],
+        creative: ['hands'],
+        energy:   ['tired', 'neutral', 'good'],
+        mental:   ['overstimulated', 'clear'],
+        minTime:  0.5,
+      },
+      {
+        id: 'learn',
+        name: 'Learn something tiny',
+        emoji: '🌱',
+        description: "A short Duolingo session, a YouTube explainer, a Wikipedia spiral on something that genuinely interests you. Feed your brain in a good way.",
+        starter: "One thing only: five minutes of Duolingo, one explainer video you've been meaning to watch, or a single Brilliant lesson. Start small.",
+        social:   ['solo', 'either'],
+        creative: ['absorb'],
+        energy:   ['tired', 'neutral', 'good'],
+        mental:   ['clear'],
+        minTime:  0.25,
+      },
+      {
+        id: 'bath',
+        name: 'Long bath + podcast or audiobook',
+        emoji: '🛁',
+        description: "The most restorative combination: warm water, something interesting in your ears, and no one who needs anything from you.",
+        starter: "Run it hot, bring a drink, and queue up your podcast before you get in. Lock the door. Minimum 30 minutes — you've earned it.",
+        social:   ['solo', 'either'],
+        creative: ['absorb', 'zoneout'],
+        energy:   ['drained', 'tired'],
+        mental:   ['overstimulated', 'foggy', 'clear'],
+        minTime:  0.5,
+      },
+      {
+        id: 'baking',
+        name: 'Bake or cook something enjoyable',
+        emoji: '🍪',
+        description: "Not meal prep — something you actually want to eat. Warm cookies, a little pasta, a fancy snack board. The making is the point.",
+        starter: "Keep it simple: brown butter cookies, fancy avocado toast, or just make yourself a proper warm drink and snack situation. Put music on.",
+        social:   ['solo', 'together', 'either'],
+        creative: ['hands'],
+        energy:   ['neutral', 'good'],
+        mental:   ['clear', 'foggy'],
+        minTime:  0.75,
+      },
+      {
+        id: 'embroidery',
+        name: 'Embroidery or knitting',
+        emoji: '🧵',
+        description: "Repetitive and rhythmic — the best kind of activity for a busy mind. Your hands stay occupied while your thoughts gently slow down.",
+        starter: "If you're starting out: grab a simple embroidery kit, pick a small section, and follow the thread. Put something comfortable on in the background.",
+        social:   ['solo', 'either'],
+        creative: ['hands', 'zoneout'],
+        energy:   ['drained', 'tired', 'neutral'],
+        mental:   ['overstimulated', 'foggy', 'clear'],
+        minTime:  0.5,
+      },
+      {
+        id: 'documentary',
+        name: 'Watch a documentary',
+        emoji: '🎥',
+        description: "The best kind of screen time — you finish it feeling like you went somewhere and actually learned something.",
+        starter: "Netflix and Apple TV are full of great ones. Try something on nature, food, a fascinating person, or a place you've always wanted to visit.",
+        social:   ['solo', 'together', 'either'],
+        creative: ['absorb'],
+        energy:   ['tired', 'neutral', 'good'],
+        mental:   ['foggy', 'clear'],
+        minTime:  1,
+      },
+      {
+        id: 'walk',
+        name: 'An evening walk',
+        emoji: '🚶‍♀️',
+        description: "Fresh air, movement, a change of scene. Sometimes getting outside — even just around the block — completely resets your evening.",
+        starter: "Put on a podcast or your favorite playlist, grab a jacket, and walk for 20–30 minutes. No destination needed. Just move.",
+        social:   ['solo', 'together', 'either'],
+        creative: ['zoneout', 'absorb'],
+        energy:   ['tired', 'neutral', 'good'],
+        mental:   ['overstimulated', 'foggy', 'clear'],
+        minTime:  0.5,
+      },
+      {
+        id: 'write',
+        name: 'Write something',
+        emoji: '📝',
+        description: "A journal entry, a letter, a memory you want to keep. Writing for yourself — no audience, no purpose — is quietly restorative.",
+        starter: "Try writing a letter to your toddler they'll read someday. Describe what they're like right now: a laugh, a word they mispronounce, a thing they love.",
+        social:   ['solo', 'either'],
+        creative: ['hands', 'absorb'],
+        energy:   ['tired', 'neutral', 'good'],
+        mental:   ['clear', 'overstimulated'],
+        minTime:  0.5,
+      },
+    ];
+
+    // ─────────────────────────────────────────────
+    //  SCORING ENGINE
+    // ─────────────────────────────────────────────
+    const TIME_HOURS = { '1hr': 1, '2hr': 2, '3hr': 3 };
+
+    function scoreActivity(activity, answers) {
+      const { energy, mental, social, creative, time } = answers;
+      const timeHours = TIME_HOURS[time];
+      let score = 0;
+
+      // ── Hard exclusions ──
+      if (activity.minTime > timeHours) return -999;
+      if (!activity.energy.includes(energy)) return -999;
+
+      // Social hard exclusions
+      if (social === 'together' &&
+          !activity.social.includes('together') &&
+          !activity.social.includes('either')) return -999;
+      if (social === 'solo' &&
+          activity.social.length === 1 &&
+          activity.social[0] === 'together') return -999;
+
+      // Drained: exclude high-engagement activities
+      if (energy === 'drained') {
+        if (['board-games', 'baking', 'write', 'learn', 'documentary', 'nonfiction', 'walk'].includes(activity.id))
+          return -999;
+        if (['bath', 'yoga', 'series', 'embroidery', 'podcast', 'fiction', 'journal', 'husband-games'].includes(activity.id))
+          score += 20;
+      }
+
+      // ── Mental state ──
+      if (activity.mental.includes(mental)) score += 12;
+      else score -= 18;
+
+      if (mental === 'overstimulated') {
+        if (['clay', 'embroidery', 'yoga', 'doodle', 'bath', 'journal'].includes(activity.id))  score += 28;
+        if (['nonfiction', 'learn', 'board-games', 'interview'].includes(activity.id))           score -= 20;
+      }
+      if (mental === 'foggy') {
+        if (['podcast', 'husband-games', 'series', 'bath', 'yoga', 'embroidery'].includes(activity.id)) score += 22;
+        if (['nonfiction', 'learn', 'write', 'clay', 'doodle', 'board-games'].includes(activity.id))    score -= 16;
+      }
+      if (mental === 'clear') {
+        if (['nonfiction', 'learn', 'write', 'documentary', 'board-games', 'baking'].includes(activity.id)) score += 15;
+      }
+
+      // ── Creative / mode match ──
+      if (activity.creative.includes(creative)) score += 22;
+      else score -= 12;
+
+      if (creative === 'hands') {
+        if (['clay', 'baking', 'embroidery', 'doodle', 'write', 'journal'].includes(activity.id)) score += 22;
+      }
+      if (creative === 'absorb') {
+        if (['fiction', 'nonfiction', 'podcast', 'interview', 'documentary', 'learn'].includes(activity.id)) score += 18;
+      }
+      if (creative === 'zoneout') {
+        if (['series', 'husband-games', 'embroidery', 'yoga', 'bath', 'podcast', 'walk', 'movie'].includes(activity.id)) score += 18;
+        if (['clay', 'write', 'journal', 'doodle', 'learn', 'baking'].includes(activity.id)) score -= 12;
+      }
+
+      // ── Social bonuses ──
+      if (social === 'together') {
+        if (['movie', 'board-games', 'husband-games', 'baking', 'documentary', 'walk', 'series'].includes(activity.id)) score += 14;
+      }
+      if (social === 'solo') {
+        if (['bath', 'fiction', 'podcast', 'journal', 'clay', 'doodle', 'yoga'].includes(activity.id)) score += 6;
+      }
+
+      return score;
+    }
+
+    function getRecommendations(answers) {
+      return ACTIVITIES
+        .map(a => ({ ...a, score: scoreActivity(a, answers) }))
+        .filter(a => a.score > -999)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 3);
+    }
+
+    // ─────────────────────────────────────────────
+    //  CONTEXTUAL "WHY" GENERATION
+    // ─────────────────────────────────────────────
+    const WHY_MAP = {
+      clay: {
+        overstimulated: "Your mind is buzzing — working with your hands will quiet it faster than any screen can.",
+        foggy: "Clay doesn't need you to think. Just feel the material and let your hands figure it out.",
+        default: "There's something about making a physical thing that screens can never replicate.",
+      },
+      embroidery: {
+        overstimulated: "The repetition is exactly what an overstimulated mind needs — rhythm over racing thoughts.",
+        foggy: "When your brain is foggy, repetitive hand work is perfect: low demand, strangely absorbing.",
+        drained: "Your hands can do this even when your brain can't. It's designed for exactly this kind of tired.",
+        default: "Repetitive and rhythmic, with something to show for it at the end.",
+      },
+      yoga: {
+        drained: "You're drained — your body needs gentle movement more than rest alone. This will help you sleep better too.",
+        overstimulated: "Movement and breath are the fastest reset for an overstimulated nervous system.",
+        default: "Your body carried a lot today. Give it the gentle release it's been waiting for.",
+      },
+      bath: {
+        drained: "You're running on empty. Warm water and zero demands is exactly the right prescription tonight.",
+        overstimulated: "Hot water has a way of dissolving thoughts that have been running too fast.",
+        default: "A bath with something good in your ears hits different when you actually need it.",
+      },
+      series: {
+        foggy: "When your brain is foggy, something episodic is perfect — low commitment, easy to follow.",
+        drained: "You don't have to do anything. Just let it play.",
+        together: "Side by side on the couch with something good on — honestly one of the best evenings.",
+        default: "A good show is one of the simplest pleasures. You don't have to justify it.",
+      },
+      podcast: {
+        overstimulated: "Audio-only gives your eyes a rest while your ears have somewhere gentle to go.",
+        foggy: "A good podcast carries you along without requiring anything back from you.",
+        default: "Put something good in your ears and let someone else do the thinking for a while.",
+      },
+      'husband-games': {
+        overstimulated: "Being near someone without having to talk is sometimes exactly what you need when you're overstimulated.",
+        foggy: "Easy, low-demand company. Together without needing to perform.",
+        default: "Quiet company and zero pressure to participate. Sometimes that's the perfect evening.",
+      },
+      'board-games': {
+        good: "You have the energy to be fully present and actually have fun with this.",
+        clear: "Your head is clear enough to actually enjoy a game — and laugh about it.",
+        default: "Real quality time — laughing and being playful together. Underrated as a date night.",
+      },
+      movie: {
+        together: "A proper movie night is a small act of choosing each other for the evening.",
+        drained: "You don't need to do anything — just show up with snacks and let the story carry you.",
+        default: "Sometimes the best evening is a good film and someone next to you on the couch.",
+      },
+      fiction: {
+        overstimulated: "Fiction pulls you into someone else's world entirely — one of the best escapes from an overactive mind.",
+        foggy: "A story will carry you when you can't generate your own momentum.",
+        default: "Disappearing into a book is one of the oldest forms of rest.",
+      },
+      documentary: {
+        clear: "You have the headspace to actually absorb something interesting tonight.",
+        foggy: "A good documentary does all the work — you just follow along.",
+        together: "Watching something real and interesting together is quietly good for a relationship.",
+        default: "You'll finish it feeling like you actually went somewhere.",
+      },
+      journal: {
+        overstimulated: "Getting the noise in your head onto paper is one of the fastest ways to actually quiet it.",
+        foggy: "Sometimes you don't know what you're feeling until you write it down.",
+        default: "Five minutes with a prompt can clear mental clutter that otherwise follows you to bed.",
+      },
+      doodle: {
+        overstimulated: "Your hands work, your brain gets to slow down. Doodling is a surprisingly fast route to calm.",
+        default: "No rules, no goal — just the quiet pleasure of putting marks on paper.",
+      },
+      learn: {
+        clear: "You have the clarity tonight to actually absorb something and enjoy it.",
+        good: "You have the energy for it, and your brain will thank you.",
+        default: "A tiny bit of intentional learning for yourself — not work, not parenting. Just you.",
+      },
+      baking: {
+        good: "You have the energy for it, and you get to eat something warm at the end.",
+        together: "Cooking together is underrated couple time: side by side, music on, something delicious coming.",
+        clear: "You have the headspace to enjoy the process — which is half the point.",
+        default: "Making something you'll eat is one of the more satisfying ways to spend an evening hour.",
+      },
+      walk: {
+        overstimulated: "Getting outside and moving is one of the fastest resets for an overstimulated mind.",
+        together: "An evening walk together is a quiet, underrated way to reconnect.",
+        default: "Sometimes fresh air and a change of scene is all you need to feel like yourself again.",
+      },
+      write: {
+        overstimulated: "Writing slows the noise down. Getting things out of your head and onto the page actually works.",
+        clear: "You have the clarity tonight to write something real — maybe something you'll want to keep.",
+        default: "Writing for yourself — no audience, no purpose — is quietly restorative.",
+      },
+      nonfiction: {
+        clear: "Your head is clear enough to actually absorb something and enjoy it.",
+        good: "You have the energy tonight to actually retain what you read.",
+        default: "One chapter of something genuinely interesting feels like a gift to yourself.",
+      },
+      interview: {
+        foggy: "A good long-form conversation pulls you in without demanding anything back.",
+        default: "Let someone fascinating think out loud while you listen. It's oddly comforting.",
+      },
+      fiction: {
+        overstimulated: "Fiction pulls you somewhere else entirely — one of the best escapes from an overactive mind.",
+        foggy: "A story will carry you along when you can't generate your own momentum.",
+        drained: "Reading is gentle enough for even a depleted evening. Let the story do the work.",
+        default: "Disappearing into a book is one of the oldest forms of rest.",
+      },
+    };
+
+    function generateWhy(activity, answers) {
+      const { energy, mental, social } = answers;
+      const m = WHY_MAP[activity.id];
+      if (!m) return "This feels right for where you are tonight.";
+      return m[mental] || m[energy] || m[social] || m['default'] || "This feels right for where you are tonight.";
+    }
+
+    // ─────────────────────────────────────────────
+    //  ENERGY LABEL (for returning visitor message)
+    // ─────────────────────────────────────────────
+    const ENERGY_LABELS = {
+      drained: 'completely drained',
+      tired:   'tired but okay',
+      neutral: 'feeling neutral',
+      good:    'surprisingly good',
+    };
+
+    // ─────────────────────────────────────────────
+    //  COMPONENTS
+    // ─────────────────────────────────────────────
+
+    function ProgressDots({ current, total }) {
+      return (
+        <div className="flex items-center gap-2 justify-center mb-10">
+          {Array.from({ length: total }).map((_, i) => (
+            <div
+              key={i}
+              style={{
+                transition: 'all 0.3s ease',
+                width:  i === current ? '24px' : '8px',
+                height: '8px',
+                borderRadius: '9999px',
+                background: i < current ? '#c4714f' : i === current ? '#d4a853' : 'rgba(245,239,230,0.18)',
+              }}
+            />
+          ))}
+        </div>
+      );
+    }
+
+    function WelcomeScreen({ onStart, lastEnergy }) {
+      return (
+        <div className="fade-in flex flex-col items-center justify-center min-h-screen px-6 text-center">
+          <div style={{ fontSize: '56px', marginBottom: '20px' }}>🌙</div>
+          <h1 className="font-serif text-cream mb-3" style={{ fontSize: 'clamp(2.4rem, 8vw, 3.2rem)', fontWeight: 600, letterSpacing: '-0.5px' }}>
+            Tonight?
+          </h1>
+          <p className="font-serif text-cream mb-2" style={{ opacity: 0.65, fontSize: '1.1rem', fontStyle: 'italic', maxWidth: '300px', lineHeight: 1.55 }}>
+            The baby's asleep. This time is yours.
+          </p>
+          <p className="font-serif text-cream mb-10" style={{ opacity: 0.5, fontSize: '1rem', fontStyle: 'italic' }}>
+            Let's figure out how to spend it.
+          </p>
+
+          {lastEnergy && (
+            <div className="mb-8 rounded-2xl px-5 py-4 text-sm text-center" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(245,239,230,0.1)', maxWidth: '280px', width: '100%' }}>
+              <p style={{ color: 'rgba(245,239,230,0.45)', marginBottom: '4px' }}>Last time you were</p>
+              <p className="font-medium" style={{ color: '#d4a853' }}>{lastEnergy}</p>
+              <p style={{ color: 'rgba(245,239,230,0.35)', fontSize: '0.78rem', marginTop: '4px' }}>How are you tonight?</p>
+            </div>
+          )}
+
+          <button
+            onClick={onStart}
+            className="font-medium"
+            style={{
+              background: '#c4714f',
+              color: '#f5efe6',
+              border: 'none',
+              borderRadius: '16px',
+              padding: '16px 40px',
+              fontSize: '1.1rem',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              boxShadow: '0 4px 24px rgba(196,113,79,0.35)',
+            }}
+            onMouseEnter={e => { e.target.style.background = '#a35a3a'; e.target.style.transform = 'scale(1.04)'; }}
+            onMouseLeave={e => { e.target.style.background = '#c4714f'; e.target.style.transform = 'scale(1)'; }}
+          >
+            Let's go →
+          </button>
+        </div>
+      );
+    }
+
+    function QuestionScreen({ question, onAnswer, currentIndex, total }) {
+      return (
+        <div className="fade-in w-full px-5" style={{ maxWidth: '480px', paddingTop: '60px', paddingBottom: '40px' }}>
+          <ProgressDots current={currentIndex} total={total} />
+
+          <h2 className="font-serif text-cream text-center" style={{ fontSize: 'clamp(1.3rem, 5vw, 1.65rem)', fontWeight: 600, lineHeight: 1.4, marginBottom: '32px', paddingLeft: '8px', paddingRight: '8px' }}>
+            {question.q}
+          </h2>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {question.options.map(opt => (
+              <button
+                key={opt.value}
+                onClick={() => onAnswer(question.id, opt.value)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '16px',
+                  background: 'rgba(245,239,230,0.05)',
+                  border: '1px solid rgba(245,239,230,0.1)',
+                  borderRadius: '16px',
+                  padding: '16px 20px',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  width: '100%',
+                  transition: 'all 0.2s ease',
+                  color: '#f5efe6',
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.background = 'rgba(245,239,230,0.09)';
+                  e.currentTarget.style.borderColor = 'rgba(196,113,79,0.5)';
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                  e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.2)';
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = 'rgba(245,239,230,0.05)';
+                  e.currentTarget.style.borderColor = 'rgba(245,239,230,0.1)';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
+              >
+                <span style={{ fontSize: '1.6rem', width: '36px', textAlign: 'center', flexShrink: 0 }}>
+                  {opt.emoji}
+                </span>
+                <span style={{ fontSize: '1rem', fontWeight: 500 }}>{opt.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    function ActivityCard({ activity, answers, isPrimary }) {
+      const why = generateWhy(activity, answers);
+
+      return (
+        <div
+          className="fade-in"
+          style={{
+            background: isPrimary ? '#f5efe6' : 'rgba(245,239,230,0.06)',
+            border: isPrimary ? 'none' : '1px solid rgba(245,239,230,0.12)',
+            borderRadius: '24px',
+            padding: '28px',
+            marginBottom: isPrimary ? '0' : '0',
+          }}
+        >
+          {/* Header */}
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px', marginBottom: '16px' }}>
+            <span style={{ fontSize: '2.4rem', marginTop: '2px', flexShrink: 0 }}>{activity.emoji}</span>
+            <div>
+              {isPrimary && (
+                <span
+                  style={{
+                    display: 'inline-block',
+                    fontSize: '0.72rem',
+                    fontWeight: 600,
+                    letterSpacing: '0.05em',
+                    textTransform: 'uppercase',
+                    color: '#c4714f',
+                    background: 'rgba(196,113,79,0.12)',
+                    borderRadius: '20px',
+                    padding: '3px 10px',
+                    marginBottom: '6px',
+                  }}
+                >
+                  Tonight's pick
+                </span>
+              )}
+              <h3
+                className="font-serif"
+                style={{
+                  fontSize: isPrimary ? '1.5rem' : '1.25rem',
+                  fontWeight: 600,
+                  lineHeight: 1.3,
+                  color: isPrimary ? '#1a1a2e' : '#f5efe6',
+                }}
+              >
+                {activity.name}
+              </h3>
+            </div>
+          </div>
+
+          {/* Description */}
+          <p
+            style={{
+              fontSize: '0.93rem',
+              lineHeight: 1.65,
+              marginBottom: '12px',
+              color: isPrimary ? 'rgba(26,26,46,0.7)' : 'rgba(245,239,230,0.65)',
+            }}
+          >
+            {activity.description}
+          </p>
+
+          {/* Contextual why */}
+          <p
+            className="font-serif"
+            style={{
+              fontSize: '0.93rem',
+              fontStyle: 'italic',
+              lineHeight: 1.6,
+              marginBottom: '18px',
+              color: isPrimary ? '#a35a3a' : '#d4a853',
+              borderLeft: `3px solid ${isPrimary ? '#c4714f' : '#d4a853'}`,
+              paddingLeft: '14px',
+            }}
+          >
+            {why}
+          </p>
+
+          {/* Starter suggestion */}
+          <div
+            style={{
+              background: isPrimary ? 'rgba(26,26,46,0.05)' : 'rgba(245,239,230,0.04)',
+              borderRadius: '14px',
+              padding: '14px 16px',
+            }}
+          >
+            <p
+              style={{
+                fontSize: '0.72rem',
+                fontWeight: 600,
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                color: isPrimary ? 'rgba(26,26,46,0.38)' : 'rgba(245,239,230,0.35)',
+                marginBottom: '6px',
+              }}
+            >
+              How to start
+            </p>
+            <p
+              style={{
+                fontSize: '0.88rem',
+                lineHeight: 1.6,
+                color: isPrimary ? 'rgba(26,26,46,0.68)' : 'rgba(245,239,230,0.58)',
+              }}
+            >
+              {activity.starter}
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    function ResultScreen({ recommendations, answers, onRestart }) {
+      const [showAlts, setShowAlts] = useState(false);
+      const [top, ...alts] = recommendations;
+
+      if (!top) {
+        return (
+          <div className="fade-in w-full px-5 text-center" style={{ maxWidth: '480px', paddingTop: '80px' }}>
+            <p className="text-cream font-serif" style={{ opacity: 0.6 }}>Hmm, nothing matched tonight. Try starting over!</p>
+            <button onClick={onRestart} style={{ color: '#c4714f', background: 'none', border: 'none', cursor: 'pointer', marginTop: '20px', fontSize: '0.9rem' }}>Start over</button>
+          </div>
+        );
+      }
+
+      return (
+        <div className="fade-in w-full px-5" style={{ maxWidth: '480px', paddingTop: '48px', paddingBottom: '48px' }}>
+          {/* Header */}
+          <div className="text-center" style={{ marginBottom: '28px' }}>
+            <p style={{ color: 'rgba(245,239,230,0.4)', fontSize: '0.78rem', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '8px' }}>
+              Your evening
+            </p>
+            <h2 className="font-serif text-cream" style={{ fontSize: 'clamp(1.5rem, 5vw, 2rem)', fontWeight: 600 }}>
+              Here's what fits tonight.
+            </h2>
+          </div>
+
+          {/* Primary recommendation */}
+          <ActivityCard activity={top} answers={answers} isPrimary={true} />
+
+          {/* Alternatives */}
+          <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {!showAlts && alts.length > 0 && (
+              <button
+                onClick={() => setShowAlts(true)}
+                style={{
+                  width: '100%',
+                  background: 'transparent',
+                  border: '1px solid rgba(245,239,230,0.18)',
+                  borderRadius: '16px',
+                  padding: '14px 20px',
+                  fontSize: '0.92rem',
+                  fontWeight: 500,
+                  color: 'rgba(245,239,230,0.6)',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  fontFamily: 'Inter, sans-serif',
+                }}
+                onMouseEnter={e => { e.target.style.borderColor = 'rgba(245,239,230,0.35)'; e.target.style.color = 'rgba(245,239,230,0.85)'; }}
+                onMouseLeave={e => { e.target.style.borderColor = 'rgba(245,239,230,0.18)'; e.target.style.color = 'rgba(245,239,230,0.6)'; }}
+              >
+                Not feeling it? See other options
+              </button>
+            )}
+
+            {showAlts && alts.map((rec, i) => (
+              <div key={rec.id} className="fade-in">
+                <ActivityCard activity={rec} answers={answers} isPrimary={false} />
+              </div>
+            ))}
+
+            <button
+              onClick={onRestart}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: 'rgba(245,239,230,0.3)',
+                cursor: 'pointer',
+                fontSize: '0.85rem',
+                padding: '8px',
+                marginTop: '4px',
+                fontFamily: 'Inter, sans-serif',
+                transition: 'color 0.2s',
+              }}
+              onMouseEnter={e => { e.target.style.color = 'rgba(245,239,230,0.6)'; }}
+              onMouseLeave={e => { e.target.style.color = 'rgba(245,239,230,0.3)'; }}
+            >
+              Start over
+            </button>
+          </div>
+
+          <p className="font-serif text-center" style={{ color: 'rgba(245,239,230,0.2)', fontSize: '0.78rem', fontStyle: 'italic', marginTop: '40px' }}>
+            Made for the hours after 7pm
+          </p>
+        </div>
+      );
+    }
+
+    // ─────────────────────────────────────────────
+    //  APP
+    // ─────────────────────────────────────────────
+    function App() {
+      const [screen, setScreen]       = useState('welcome');
+      const [currentQ, setCurrentQ]   = useState(0);
+      const [answers, setAnswers]     = useState({});
+      const [fading, setFading]       = useState(false);
+      const [recs, setRecs]           = useState([]);
+
+      const [lastAnswers] = useState(() => {
+        try {
+          const s = localStorage.getItem('tonight-answers');
+          return s ? JSON.parse(s) : null;
+        } catch { return null; }
+      });
+
+      const lastEnergy = lastAnswers?.energy ? ENERGY_LABELS[lastAnswers.energy] : null;
+
+      function transition(fn) {
+        setFading(true);
+        setTimeout(() => { fn(); setFading(false); }, 320);
+      }
+
+      function handleStart() {
+        transition(() => { setAnswers({}); setCurrentQ(0); setScreen('questions'); });
+      }
+
+      function handleAnswer(id, value) {
+        const newAnswers = { ...answers, [id]: value };
+        setAnswers(newAnswers);
+
+        if (currentQ < QUESTIONS.length - 1) {
+          transition(() => setCurrentQ(q => q + 1));
+        } else {
+          const r = getRecommendations(newAnswers);
+          setRecs(r);
+          try { localStorage.setItem('tonight-answers', JSON.stringify(newAnswers)); } catch {}
+          transition(() => setScreen('results'));
+        }
+      }
+
+      function handleRestart() {
+        transition(() => { setScreen('welcome'); setAnswers({}); setCurrentQ(0); });
+      }
+
+      return (
+        <div style={{ minHeight: '100vh', background: '#1a1a2e', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          {/* Moon logo */}
+          {screen !== 'welcome' && (
+            <div style={{ position: 'fixed', top: '18px', left: '20px', fontSize: '1.4rem', zIndex: 10, opacity: 0.7 }}>
+              🌙
+            </div>
+          )}
+
+          {/* Content */}
+          {fading ? (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
+              <div className="pulsing" style={{ fontSize: '1.8rem' }}>🌙</div>
+            </div>
+          ) : (
+            <>
+              {screen === 'welcome' && (
+                <WelcomeScreen onStart={handleStart} lastEnergy={lastEnergy} />
+              )}
+              {screen === 'questions' && (
+                <QuestionScreen
+                  question={QUESTIONS[currentQ]}
+                  onAnswer={handleAnswer}
+                  currentIndex={currentQ}
+                  total={QUESTIONS.length}
+                />
+              )}
+              {screen === 'results' && (
+                <ResultScreen
+                  recommendations={recs}
+                  answers={answers}
+                  onRestart={handleRestart}
+                />
+              )}
+            </>
+          )}
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
