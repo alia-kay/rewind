@@ -52,6 +52,36 @@
 
     /* Remove tap highlight on mobile */
     button { -webkit-tap-highlight-color: transparent; }
+
+    /* ── Mobile layout ─────────────────────────────── */
+    @media (max-width: 767px) {
+      /* Today tab: full-width comfortable padding */
+      .today-container {
+        padding: 24px 16px 60px !important;
+      }
+      /* Activities: hide right detail panel, show full-width list */
+      .activities-right-panel { display: none !important; }
+      .activities-left-panel {
+        width: 100% !important;
+        border-right: none !important;
+      }
+      /* Hide date in nav on mobile */
+      .nav-date { display: none !important; }
+      /* Activities: show inline dropdown on mobile */
+      .activity-inline-detail { display: block !important; }
+
+      /* Journal: hide desktop right panel, show tab UI */
+      .journal-desktop-right { display: none !important; }
+      .journal-mobile-tabs   { display: flex !important; }
+      .journal-left-panel {
+        width: 100% !important;
+        border-right: none !important;
+      }
+    }
+
+    /* Desktop: hide mobile-only elements */
+    .journal-mobile-tabs { display: none; }
+    .activity-inline-detail { display: none; }
   </style>
 </head>
 <body>
@@ -901,7 +931,7 @@
       const now = new Date();
       const dateStr = now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 
-      const isHome       = ['welcome','questions','results'].includes(screen);
+      const isHome       = ['today','questions','results'].includes(screen);
       const isJournal    = screen === 'calendar';
       const isActivities = screen === 'activities';
 
@@ -933,11 +963,11 @@
             <span className="font-serif" style={{ color: '#f5efe6', fontSize: '0.9rem', fontWeight: 600 }}>Tonight?</span>
           </div>
           <div style={{ display: 'flex', gap: '28px', alignItems: 'center' }}>
-            {navBtn(isHome,       'Home',       'home')}
+            {navBtn(isHome,       'Today',      'today')}
             {navBtn(isJournal,    'Journal',    'journal')}
             {navBtn(isActivities, 'Activities', 'activities')}
           </div>
-          <div style={{ color: 'rgba(245,239,230,0.32)', fontSize: '0.75rem', fontFamily: 'Inter, sans-serif', minWidth: '110px', textAlign: 'right' }}>
+          <div className="nav-date" style={{ color: 'rgba(245,239,230,0.32)', fontSize: '0.75rem', fontFamily: 'Inter, sans-serif', minWidth: '110px', textAlign: 'right' }}>
             {dateStr}
           </div>
         </div>
@@ -947,90 +977,206 @@
     // ─────────────────────────────────────────────
     //  WELCOME SCREEN
     // ─────────────────────────────────────────────
-    function WelcomeScreen({ onWrite, onSkip, lastEntry }) {
-      const now = new Date();
-      const weekInt = loadIntention(getWeekKey(now));
-      const weekSentence = weekInt?.sentence || '';
+    function TodayScreen({ onWrite, onSkip }) {
+      const now   = new Date();
+      const today = todayStr();
+      const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
-      const lastEntryDate = lastEntry?.date ? (() => {
-        const d = new Date(lastEntry.date + 'T12:00:00');
-        return d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
-      })() : null;
+      const [todayEntry,    setTodayEntry]    = useState(() => loadJournalEntry(today));
+      const [editMode,      setEditMode]      = useState(false);
+      const [editData,      setEditData]      = useState(null);
+      const [deleteConfirm, setDeleteConfirm] = useState(false);
+
+      const hour  = now.getHours();
+      const greet = hour < 5 ? 'Still up?' : hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+      const dateStr = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+
+      const weekKey  = getWeekKey(now);
+      const monthKey = getMonthKey(now.getFullYear(), now.getMonth());
+      const weekLabel = `Week of ${getWeekStart(now).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+
+      const energyEmoji = { drained:'🪫', tired:'😴', neutral:'😐', good:'✨' };
+      const energyLabel = { drained:'Completely drained', tired:'Tired but okay', neutral:'Neutral', good:'Surprisingly good' };
+      const mentalEmoji = { overstimulated:'🌀', foggy:'🌫️', clear:'🙂' };
+      const mentalLabel = { overstimulated:'Overstimulated', foggy:'Foggy and kind of blank', clear:'Clear enough' };
+      const emotionEmoji = { anxious:'😬', overwhelmed:'🌊', sad:'😔', irritated:'😤', calm:'😌', good:'🙂' };
+      const emotionLabel = { anxious:'Anxious', overwhelmed:'Overwhelmed', sad:'Sad', irritated:'Irritated', calm:'Calm', good:'Good' };
+      const stressEmoji  = { low:'🌿', medium:'🌤️', high:'🔥' };
+      const stressLabel  = { low:'Low intensity', medium:'Medium intensity', high:'High intensity' };
+      const ENERGY_TINTS = { good:{bg:'#D6ECD2',text:'#2E6B27'}, neutral:{bg:'#FAE8D0',text:'#854F0B'}, tired:{bg:'#FAE8D0',text:'#854F0B'}, drained:{bg:'#F5DDD8',text:'#712B13'} };
+
+      function enterEditMode() {
+        setEditData({
+          energyLevel: todayEntry.energyLevel || '',
+          mentalState: todayEntry.mentalState || '',
+          prompts: (todayEntry.prompts || []).map(p => ({ ...p })),
+          notes: todayEntry.notes || '',
+        });
+        setEditMode(true);
+        setDeleteConfirm(false);
+      }
+
+      function handleSaveEdit() {
+        if (!editData || !todayEntry) return;
+        const updated = { ...todayEntry, ...editData };
+        try { localStorage.setItem(`journal_${today}`, JSON.stringify(updated)); } catch {}
+        setTodayEntry(updated);
+        setEditMode(false);
+        setEditData(null);
+      }
+
+      function handleDelete() {
+        if (!deleteConfirm) { setDeleteConfirm(true); return; }
+        try { localStorage.removeItem(`journal_${today}`); } catch {}
+        setTodayEntry(null);
+        setDeleteConfirm(false);
+        setEditMode(false);
+        setEditData(null);
+      }
 
       return (
-        <div className="fade-in flex flex-col items-center justify-center px-6 text-center" style={{ minHeight: 'calc(100vh - 56px)', width: '100%' }}>
-          <div style={{ fontSize: '56px', marginBottom: '20px' }}>🌙</div>
-          <h1 className="font-serif text-cream mb-3" style={{ fontSize: 'clamp(2.4rem, 8vw, 3.2rem)', fontWeight: 600, letterSpacing: '-0.5px' }}>
-            Tonight?
-          </h1>
-          <p className="font-serif text-cream mb-2" style={{ opacity: 0.65, fontSize: '1.1rem', fontStyle: 'italic', maxWidth: '300px', lineHeight: 1.55 }}>
-            The baby's asleep. This time is yours.
-          </p>
-          <p className="font-serif text-cream mb-8" style={{ opacity: 0.45, fontSize: '0.95rem', fontStyle: 'italic' }}>
-            Let's figure out how to spend it.
-          </p>
+        <div className="fade-in" style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+          <div className="today-container" style={{ width: '100%', maxWidth: '680px', padding: '32px 24px 60px', boxSizing: 'border-box' }}>
 
-          <p style={{ color: 'rgba(245,239,230,0.35)', fontSize: '0.72rem', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '16px' }}>
-            How are you arriving tonight?
-          </p>
-
-          <button
-            onClick={onWrite}
-            className="font-medium"
-            style={{
-              background: '#c4714f',
-              color: '#f5efe6',
-              border: 'none',
-              borderRadius: '16px',
-              padding: '16px 40px',
-              fontSize: '1.1rem',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-              boxShadow: '0 4px 24px rgba(196,113,79,0.35)',
-              marginBottom: '14px',
-            }}
-            onMouseEnter={e => { e.currentTarget.style.background = '#a35a3a'; e.currentTarget.style.transform = 'scale(1.04)'; }}
-            onMouseLeave={e => { e.currentTarget.style.background = '#c4714f'; e.currentTarget.style.transform = 'scale(1)'; }}
-          >
-            Write first ✏️
-          </button>
-
-          <button
-            onClick={onSkip}
-            style={{
-              background: 'transparent',
-              border: '1px solid rgba(245,239,230,0.2)',
-              borderRadius: '14px',
-              padding: '13px 32px',
-              fontSize: '0.95rem',
-              fontWeight: 500,
-              color: 'rgba(245,239,230,0.6)',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-              fontFamily: 'Inter, sans-serif',
-              marginBottom: '32px',
-            }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(245,239,230,0.4)'; e.currentTarget.style.color = 'rgba(245,239,230,0.85)'; }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(245,239,230,0.2)'; e.currentTarget.style.color = 'rgba(245,239,230,0.6)'; }}
-          >
-            Skip to recommendations →
-          </button>
-
-          {(weekSentence || lastEntryDate) && (
-            <div style={{ width: '100%', maxWidth: '300px', paddingTop: '20px', borderTop: '0.5px solid rgba(245,239,230,0.1)', marginBottom: '8px' }}>
-              {weekSentence && (
-                <p className="font-serif" style={{ color: 'rgba(245,239,230,0.4)', fontSize: '0.88rem', fontStyle: 'italic', lineHeight: 1.5, marginBottom: lastEntryDate ? '8px' : 0 }}>
-                  {weekSentence}
-                </p>
-              )}
-              {lastEntryDate && (
-                <p style={{ color: 'rgba(245,239,230,0.28)', fontSize: '0.78rem', fontFamily: 'Inter, sans-serif' }}>
-                  Last entry: {lastEntryDate}
-                </p>
-              )}
+            {/* Greeting + date */}
+            <div style={{ marginBottom: '28px' }}>
+              <p style={{ color: 'rgba(245,239,230,0.4)', fontSize: '0.8rem', fontFamily: 'Inter, sans-serif', marginBottom: '4px' }}>{dateStr}</p>
+              <h1 className="font-serif text-cream" style={{ fontSize: 'clamp(1.7rem,5vw,2.1rem)', fontWeight: 600, margin: 0 }}>{greet}.</h1>
             </div>
-          )}
 
+            {todayEntry ? (
+              <>
+                {/* Today's entry card */}
+                <div style={{ background:'rgba(196,113,79,0.07)', border:'1px solid rgba(196,113,79,0.28)', borderRadius:'18px', padding:'20px', marginBottom:'32px' }}>
+                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'14px', gap:'10px' }}>
+                    <span className="font-serif" style={{ color:'#d4a853', fontSize:'0.95rem', fontWeight:600 }}>Tonight's entry</span>
+                    {editMode ? (
+                      <span style={{ color:'rgba(245,239,230,0.3)', fontSize:'0.72rem', fontFamily:'Inter, sans-serif' }}>editing</span>
+                    ) : deleteConfirm ? (
+                      <div style={{ display:'flex', gap:'8px', alignItems:'center' }}>
+                        <span style={{ color:'rgba(245,239,230,0.45)', fontSize:'0.74rem', fontFamily:'Inter, sans-serif' }}>Delete?</span>
+                        <button onClick={handleDelete} style={{ background:'none', border:'none', color:'#e8987a', fontSize:'0.74rem', cursor:'pointer', fontFamily:'Inter, sans-serif' }}>Confirm</button>
+                        <button onClick={()=>setDeleteConfirm(false)} style={{ background:'none', border:'none', color:'rgba(245,239,230,0.35)', fontSize:'0.74rem', cursor:'pointer', fontFamily:'Inter, sans-serif' }}>Cancel</button>
+                      </div>
+                    ) : (
+                      <div style={{ display:'flex', gap:'10px', alignItems:'center' }}>
+                        <button onClick={enterEditMode} style={{ background:'none', border:'none', color:'rgba(245,239,230,0.35)', fontSize:'0.78rem', cursor:'pointer', fontFamily:'Inter, sans-serif', transition:'color 0.2s' }}
+                          onMouseEnter={e=>e.currentTarget.style.color='rgba(245,239,230,0.75)'} onMouseLeave={e=>e.currentTarget.style.color='rgba(245,239,230,0.35)'}>Edit</button>
+                        <button onClick={handleDelete} style={{ background:'none', border:'none', color:'rgba(245,239,230,0.22)', fontSize:'0.78rem', cursor:'pointer', fontFamily:'Inter, sans-serif', transition:'color 0.2s' }}
+                          onMouseEnter={e=>e.currentTarget.style.color='#e8987a'} onMouseLeave={e=>e.currentTarget.style.color='rgba(245,239,230,0.22)'}>Delete</button>
+                      </div>
+                    )}
+                  </div>
+
+                  {editMode && editData ? (
+                    <div>
+                      <p style={{ color:'rgba(245,239,230,0.42)', fontSize:'0.7rem', fontFamily:'Inter, sans-serif', marginBottom:'6px', textTransform:'uppercase', letterSpacing:'0.06em' }}>Body</p>
+                      <div style={{ display:'flex', flexDirection:'column', gap:'5px', marginBottom:'14px' }}>
+                        {[{value:'drained',emoji:'🪫',label:'Completely drained'},{value:'tired',emoji:'😴',label:'Tired but okay'},{value:'neutral',emoji:'😐',label:'Neutral'},{value:'good',emoji:'✨',label:'Surprisingly good'}].map(opt => (
+                          <button key={opt.value} onClick={()=>setEditData(d=>({...d,energyLevel:opt.value}))}
+                            style={{ display:'flex', alignItems:'center', gap:'9px', background:editData.energyLevel===opt.value?'rgba(196,113,79,0.18)':'rgba(245,239,230,0.04)', border:editData.energyLevel===opt.value?'1px solid rgba(196,113,79,0.5)':'1px solid rgba(245,239,230,0.1)', borderRadius:'9px', padding:'7px 11px', cursor:'pointer', textAlign:'left', transition:'all 0.15s' }}>
+                            <span style={{ fontSize:'0.9rem' }}>{opt.emoji}</span>
+                            <span style={{ color:editData.energyLevel===opt.value?'#f5efe6':'rgba(245,239,230,0.55)', fontSize:'0.82rem', fontFamily:'Inter, sans-serif' }}>{opt.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                      <p style={{ color:'rgba(245,239,230,0.42)', fontSize:'0.7rem', fontFamily:'Inter, sans-serif', marginBottom:'6px', textTransform:'uppercase', letterSpacing:'0.06em' }}>Head</p>
+                      <div style={{ display:'flex', flexDirection:'column', gap:'5px', marginBottom:'16px' }}>
+                        {[{value:'overstimulated',emoji:'🌀',label:'Overstimulated'},{value:'foggy',emoji:'🌫️',label:'Foggy and kind of blank'},{value:'clear',emoji:'🙂',label:'Clear enough'}].map(opt => (
+                          <button key={opt.value} onClick={()=>setEditData(d=>({...d,mentalState:opt.value}))}
+                            style={{ display:'flex', alignItems:'center', gap:'9px', background:editData.mentalState===opt.value?'rgba(196,113,79,0.18)':'rgba(245,239,230,0.04)', border:editData.mentalState===opt.value?'1px solid rgba(196,113,79,0.5)':'1px solid rgba(245,239,230,0.1)', borderRadius:'9px', padding:'7px 11px', cursor:'pointer', textAlign:'left', transition:'all 0.15s' }}>
+                            <span style={{ fontSize:'0.9rem' }}>{opt.emoji}</span>
+                            <span style={{ color:editData.mentalState===opt.value?'#f5efe6':'rgba(245,239,230,0.55)', fontSize:'0.82rem', fontFamily:'Inter, sans-serif' }}>{opt.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                      <div style={{ borderTop:'0.5px solid rgba(245,239,230,0.08)', marginBottom:'14px' }} />
+                      <div style={{ display:'flex', flexDirection:'column', gap:'12px', marginBottom:'14px' }}>
+                        {editData.prompts.map((p,i) => (
+                          <div key={i}>
+                            <p className="font-serif" style={{ color:'rgba(245,239,230,0.45)', fontSize:'0.82rem', fontStyle:'italic', marginBottom:'5px' }}>{p.question}</p>
+                            <textarea value={p.answer} onChange={e=>setEditData(d=>({...d,prompts:d.prompts.map((pr,j)=>j===i?{...pr,answer:e.target.value}:pr)}))}
+                              style={{ width:'100%', boxSizing:'border-box', background:'rgba(245,239,230,0.05)', border:'1px solid rgba(245,239,230,0.1)', borderRadius:'9px', padding:'10px', color:'#f5efe6', fontSize:'0.84rem', lineHeight:1.6, resize:'vertical', outline:'none', minHeight:'70px', fontFamily:'Inter, sans-serif' }} />
+                          </div>
+                        ))}
+                      </div>
+                      <div style={{ marginBottom:'14px' }}>
+                        <p style={{ color:'rgba(245,239,230,0.42)', fontSize:'0.7rem', fontFamily:'Inter, sans-serif', marginBottom:'5px', textTransform:'uppercase', letterSpacing:'0.06em' }}>Notes</p>
+                        <textarea value={editData.notes||''} onChange={e=>setEditData(d=>({...d,notes:e.target.value}))} placeholder="A thought, a moment, anything..."
+                          style={{ width:'100%', boxSizing:'border-box', background:'rgba(245,239,230,0.05)', border:'1px solid rgba(245,239,230,0.1)', borderRadius:'9px', padding:'10px', color:'#f5efe6', fontSize:'0.84rem', lineHeight:1.6, resize:'vertical', outline:'none', minHeight:'60px', fontFamily:'Inter, sans-serif' }} />
+                      </div>
+                      <div style={{ display:'flex', gap:'8px' }}>
+                        <button onClick={handleSaveEdit} style={{ flex:1, background:'#c4714f', color:'#f5efe6', border:'none', borderRadius:'10px', padding:'10px', fontSize:'0.84rem', fontWeight:600, cursor:'pointer', fontFamily:'Inter, sans-serif', transition:'background 0.2s' }}
+                          onMouseEnter={e=>e.currentTarget.style.background='#a35a3a'} onMouseLeave={e=>e.currentTarget.style.background='#c4714f'}>Save changes</button>
+                        <button onClick={()=>{setEditMode(false);setEditData(null);}} style={{ flex:1, background:'transparent', color:'rgba(245,239,230,0.5)', border:'1px solid rgba(245,239,230,0.15)', borderRadius:'10px', padding:'10px', fontSize:'0.84rem', cursor:'pointer', fontFamily:'Inter, sans-serif' }}>Cancel</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      {(todayEntry.energyLevel || todayEntry.mentalState) && (
+                        <div style={{ display:'flex', gap:'6px', flexWrap:'wrap', marginBottom:'12px' }}>
+                          {todayEntry.energyLevel && (() => { const t=ENERGY_TINTS[todayEntry.energyLevel]; return <span style={{ background:t?t.bg:'rgba(245,239,230,0.07)', color:t?t.text:'rgba(245,239,230,0.65)', borderRadius:'20px', padding:'3px 10px', fontSize:'0.76rem', fontFamily:'Inter, sans-serif', border:t?`1px solid ${t.text}30`:'none' }}>{energyEmoji[todayEntry.energyLevel]} {energyLabel[todayEntry.energyLevel]}</span>; })()}
+                          {todayEntry.mentalState && <span style={{ background:'rgba(245,239,230,0.07)', borderRadius:'20px', padding:'3px 10px', fontSize:'0.76rem', color:'rgba(245,239,230,0.6)', fontFamily:'Inter, sans-serif' }}>{mentalEmoji[todayEntry.mentalState]} {mentalLabel[todayEntry.mentalState]}</span>}
+                          {todayEntry.emotionTone && <span style={{ background:'rgba(245,239,230,0.07)', borderRadius:'20px', padding:'3px 10px', fontSize:'0.76rem', color:'rgba(245,239,230,0.6)', fontFamily:'Inter, sans-serif' }}>{emotionEmoji[todayEntry.emotionTone]} {emotionLabel[todayEntry.emotionTone]}</span>}
+                          {todayEntry.stressIntensity && <span style={{ background:'rgba(245,239,230,0.07)', borderRadius:'20px', padding:'3px 10px', fontSize:'0.76rem', color:'rgba(245,239,230,0.6)', fontFamily:'Inter, sans-serif' }}>{stressEmoji[todayEntry.stressIntensity]} {stressLabel[todayEntry.stressIntensity]}</span>}
+                        </div>
+                      )}
+                      <div style={{ borderTop:'0.5px solid rgba(245,239,230,0.08)', marginBottom:'12px' }} />
+                      <div style={{ display:'flex', flexDirection:'column', gap:'12px' }}>
+                        {todayEntry.prompts && todayEntry.prompts.map((p,i) => (
+                          <div key={i}>
+                            <p className="font-serif" style={{ color:'rgba(245,239,230,0.45)', fontSize:'0.82rem', fontStyle:'italic', marginBottom:'3px' }}>{p.question}</p>
+                            <p style={{ color:'#f5efe6', fontSize:'0.86rem', lineHeight:1.6, fontFamily:'Inter, sans-serif', whiteSpace:'pre-wrap' }}>{p.answer || <em style={{ opacity:0.35 }}>No answer written</em>}</p>
+                          </div>
+                        ))}
+                      </div>
+                      {todayEntry.notes && (
+                        <>
+                          <div style={{ borderTop:'0.5px solid rgba(245,239,230,0.08)', margin:'12px 0 8px' }} />
+                          <p style={{ color:'rgba(245,239,230,0.32)', fontSize:'0.67rem', fontWeight:600, letterSpacing:'0.08em', textTransform:'uppercase', fontFamily:'Inter, sans-serif', marginBottom:'4px' }}>Notes</p>
+                          <p style={{ color:'rgba(245,239,230,0.62)', fontSize:'0.84rem', lineHeight:1.6, fontFamily:'Inter, sans-serif', whiteSpace:'pre-wrap' }}>{todayEntry.notes}</p>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Divider + Gentle reminders */}
+                <div style={{ display:'flex', alignItems:'center', gap:'12px', marginBottom:'20px' }}>
+                  <div style={{ flex:1, height:'0.5px', background:'rgba(245,239,230,0.08)' }} />
+                  <span style={{ color:'rgba(245,239,230,0.28)', fontSize:'0.68rem', fontWeight:600, letterSpacing:'0.1em', textTransform:'uppercase', fontFamily:'Inter, sans-serif', whiteSpace:'nowrap' }}>Gentle reminders</span>
+                  <div style={{ flex:1, height:'0.5px', background:'rgba(245,239,230,0.08)' }} />
+                </div>
+
+                <IntentionCard intentionKey={monthKey} isMonth={true}  label={`${MONTH_NAMES[now.getMonth()]} intention`} />
+                <IntentionCard intentionKey={weekKey}  isMonth={false} label={weekLabel} />
+              </>
+            ) : (
+              <>
+                {/* CTA card */}
+                <div style={{ background:'rgba(245,239,230,0.04)', border:'1px solid rgba(245,239,230,0.09)', borderRadius:'20px', padding:'40px 32px', textAlign:'center', marginBottom:'32px' }}>
+                  <h2 className="font-serif text-cream" style={{ fontSize:'clamp(1.3rem,4vw,1.6rem)', fontWeight:600, marginBottom:'10px', lineHeight:1.4 }}>How are you arriving tonight?</h2>
+                  <p style={{ color:'rgba(245,239,230,0.42)', fontSize:'0.95rem', fontFamily:'Inter, sans-serif', marginBottom:'32px', lineHeight:1.6 }}>Take a moment. It's just for you.</p>
+                  <button onClick={onWrite}
+                    style={{ background:'#c4714f', color:'#f5efe6', border:'none', borderRadius:'16px', padding:'16px 36px', fontSize:'1rem', fontWeight:600, cursor:'pointer', fontFamily:'Inter, sans-serif', boxShadow:'0 4px 24px rgba(196,113,79,0.3)', transition:'all 0.2s ease', display:'block', width:'100%', marginBottom:'12px' }}
+                    onMouseEnter={e=>{e.currentTarget.style.background='#a35a3a';e.currentTarget.style.transform='scale(1.02)';}}
+                    onMouseLeave={e=>{e.currentTarget.style.background='#c4714f';e.currentTarget.style.transform='scale(1)';}}
+                  >Write in Journal →</button>
+                  <button onClick={onSkip}
+                    style={{ background:'transparent', color:'rgba(245,239,230,0.45)', border:'1px solid rgba(245,239,230,0.15)', borderRadius:'14px', padding:'12px 28px', fontSize:'0.9rem', fontWeight:500, cursor:'pointer', fontFamily:'Inter, sans-serif', transition:'all 0.2s ease', display:'block', width:'100%' }}
+                    onMouseEnter={e=>{e.currentTarget.style.borderColor='rgba(245,239,230,0.3)';e.currentTarget.style.color='rgba(245,239,230,0.7)';}}
+                    onMouseLeave={e=>{e.currentTarget.style.borderColor='rgba(245,239,230,0.15)';e.currentTarget.style.color='rgba(245,239,230,0.45)';}}
+                  >Skip to recommendations →</button>
+                </div>
+
+                {/* Divider */}
+                <div style={{ height:'0.5px', background:'rgba(245,239,230,0.08)', marginBottom:'24px' }} />
+
+                <IntentionCard intentionKey={monthKey} isMonth={true}  label={`${MONTH_NAMES[now.getMonth()]} intention`} />
+                <IntentionCard intentionKey={weekKey}  isMonth={false} label={weekLabel} />
+              </>
+            )}
+          </div>
         </div>
       );
     }
@@ -1471,6 +1617,7 @@
     // ─────────────────────────────────────────────
     function ActivitiesScreen({ customActivities, disabledActivities, hiddenActivities, onSaveActivity, onDeleteActivity, onToggleDisabled, onHideActivity, onGetRecommendation }) {
       const [selectedActivity, setSelectedActivity] = useState(null);
+      const [expandedId, setExpandedId] = useState(null);
       const [showModal, setShowModal] = useState(false);
 
       const creativeLabels = { hands: 'Hands-on', absorb: 'Absorb', zoneout: 'Zone out' };
@@ -1492,40 +1639,43 @@
       return (
         <div style={{ width: '100%', display: 'flex', height: 'calc(100vh - 56px)', position: 'relative' }}>
           {/* Left column */}
-          <div style={{ width: '380px', flexShrink: 0, borderRight: '1px solid rgba(245,239,230,0.08)', display: 'flex', flexDirection: 'column', height: '100%' }}>
-            <div style={{ padding: '22px 18px 14px', borderBottom: '1px solid rgba(245,239,230,0.08)', flexShrink: 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
-                <div>
-                  <h2 className="font-serif text-cream" style={{ fontSize: '1.15rem', fontWeight: 600, marginBottom: '3px' }}>My activities</h2>
-                  <p style={{ color: 'rgba(245,239,230,0.38)', fontSize: '0.76rem', fontFamily: 'Inter, sans-serif' }}>Your personal recommendation pool</p>
-                </div>
-                <div style={{ display: 'flex', gap: '8px', flexShrink: 0, alignItems: 'center' }}>
-                  <button
-                    onClick={onGetRecommendation}
-                    style={{ background: 'rgba(245,239,230,0.1)', color: '#f5efe6', border: '1px solid rgba(245,239,230,0.2)', borderRadius: '9px', padding: '7px 13px', fontSize: '0.76rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'Inter, sans-serif', whiteSpace: 'nowrap', transition: 'all 0.2s' }}
-                    onMouseEnter={e => { e.currentTarget.style.background='rgba(245,239,230,0.17)'; e.currentTarget.style.borderColor='rgba(245,239,230,0.38)'; }}
-                    onMouseLeave={e => { e.currentTarget.style.background='rgba(245,239,230,0.1)'; e.currentTarget.style.borderColor='rgba(245,239,230,0.2)'; }}
-                  >
-                    Get recommendation →
-                  </button>
-                  <button
-                    onClick={() => setShowModal(true)}
-                    style={{ background: '#c4714f', color: '#f5efe6', border: 'none', borderRadius: '9px', padding: '7px 12px', fontSize: '0.76rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'Inter, sans-serif', whiteSpace: 'nowrap' }}
-                  >
-                    + Add activity
-                  </button>
-                </div>
+          <div className="activities-left-panel" style={{ width: '380px', flexShrink: 0, borderRight: '1px solid rgba(245,239,230,0.08)', display: 'flex', flexDirection: 'column', height: '100%' }}>
+            <div style={{ padding: '20px 18px 16px', borderBottom: '1px solid rgba(245,239,230,0.08)', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div>
+                <h2 className="font-serif text-cream" style={{ fontSize: '1.15rem', fontWeight: 600, marginBottom: '2px' }}>My activities</h2>
+                <p style={{ color: 'rgba(245,239,230,0.38)', fontSize: '0.76rem', fontFamily: 'Inter, sans-serif' }}>Your personal recommendation pool</p>
               </div>
+              <button
+                onClick={onGetRecommendation}
+                style={{ width: '100%', background: '#c4714f', color: '#f5efe6', border: 'none', borderRadius: '9px', padding: '9px 13px', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'Inter, sans-serif', textAlign: 'left', transition: 'background 0.2s' }}
+                onMouseEnter={e => e.currentTarget.style.background='#a35a3a'}
+                onMouseLeave={e => e.currentTarget.style.background='#c4714f'}
+              >
+                Get tonight's recommendation →
+              </button>
+              <button
+                onClick={() => setShowModal(true)}
+                style={{ width: '100%', background: 'transparent', color: 'rgba(245,239,230,0.55)', border: '1px solid rgba(245,239,230,0.18)', borderRadius: '9px', padding: '8px 13px', fontSize: '0.8rem', fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter, sans-serif', textAlign: 'left', transition: 'all 0.2s' }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor='rgba(245,239,230,0.38)'; e.currentTarget.style.color='rgba(245,239,230,0.85)'; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor='rgba(245,239,230,0.18)'; e.currentTarget.style.color='rgba(245,239,230,0.55)'; }}
+              >
+                + Add activity
+              </button>
             </div>
 
             <div style={{ overflowY: 'auto', flex: 1 }}>
               {allActivities.map((activity, i) => {
                 const isSelected = selectedActivity?.id === activity.id;
+                const isExpanded = expandedId === activity.id;
                 const isOff      = disabledActivities.has(activity.id);
+                const timeLabel  = (t) => t >= 3 ? '3 hrs' : t >= 2 ? '2 hrs' : t >= 1.5 ? '1.5 hrs' : t >= 1 ? '1 hr' : '30 min';
+                const socialLbl  = (s) => s.includes('solo') && s.includes('together') ? 'Either' : s.includes('together') ? 'Together' : 'Solo';
+                const crtvLabels = { hands: 'Hands-on', absorb: 'Absorb', zoneout: 'Zone out' };
+                const bw         = getBestWhen(activity);
                 return (
                   <div key={activity.id}>
                     <div
-                      onClick={() => setSelectedActivity(activity)}
+                      onClick={() => { setSelectedActivity(activity); setExpandedId(isExpanded ? null : activity.id); }}
                       style={{
                         display: 'flex', alignItems: 'center', gap: '10px',
                         padding: '11px 14px 11px 10px', cursor: 'pointer',
@@ -1559,7 +1709,54 @@
                         <div style={{ position: 'absolute', top: '2px', left: isOff ? '2px' : '15px', width: '14px', height: '14px', borderRadius: '50%', background: '#f5efe6', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
                       </div>
                     </div>
-                    {i < allActivities.length - 1 && (
+                    {/* Mobile inline dropdown */}
+                    {isExpanded && (
+                      <div className="activity-inline-detail" style={{ padding: '14px 16px 18px', borderBottom: '0.5px solid rgba(245,239,230,0.07)', background: 'rgba(196,113,79,0.06)' }}>
+                        <div style={{ fontSize: '1.8rem', marginBottom: '6px' }}>{activity.emoji}</div>
+                        <h3 className="font-serif text-cream" style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '10px' }}>{activity.name}</h3>
+                        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '14px' }}>
+                          {[socialLbl(activity.social), ...activity.creative.map(c => crtvLabels[c] || c), 'min. ' + timeLabel(activity.minTime)].map(t => (
+                            <span key={t} style={{ background: 'rgba(245,239,230,0.08)', color: 'rgba(245,239,230,0.6)', borderRadius: '20px', padding: '3px 10px', fontSize: '0.75rem', fontFamily: 'Inter, sans-serif' }}>{t}</span>
+                          ))}
+                        </div>
+                        <div style={{ height: '0.5px', background: 'rgba(245,239,230,0.1)', marginBottom: '14px' }} />
+                        <p style={{ color: 'rgba(245,239,230,0.38)', fontSize: '0.67rem', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '6px', fontFamily: 'Inter, sans-serif' }}>About this activity</p>
+                        <p style={{ color: 'rgba(245,239,230,0.7)', fontSize: '0.88rem', lineHeight: 1.65, fontFamily: 'Inter, sans-serif', marginBottom: '14px' }}>{activity.description}</p>
+                        {bw.length > 0 && (
+                          <>
+                            <p style={{ color: 'rgba(245,239,230,0.38)', fontSize: '0.67rem', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '8px', fontFamily: 'Inter, sans-serif' }}>Best when you're...</p>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '14px' }}>
+                              {bw.map((pt, pi) => (
+                                <div key={pi} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                                  <span style={{ color: '#c4714f', fontSize: '0.6rem', marginTop: '5px', flexShrink: 0 }}>●</span>
+                                  <p style={{ color: 'rgba(245,239,230,0.65)', fontSize: '0.86rem', lineHeight: 1.55, margin: 0, fontFamily: 'Inter, sans-serif' }}>{pt}</p>
+                                </div>
+                              ))}
+                            </div>
+                          </>
+                        )}
+                        {activity.starter && (
+                          <div style={{ background: 'rgba(245,239,230,0.04)', border: '1px solid rgba(245,239,230,0.08)', borderRadius: '12px', padding: '12px 14px', marginBottom: '16px' }}>
+                            <p style={{ color: 'rgba(245,239,230,0.38)', fontSize: '0.67rem', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '5px', fontFamily: 'Inter, sans-serif' }}>How to start</p>
+                            <p style={{ color: 'rgba(245,239,230,0.7)', fontSize: '0.86rem', lineHeight: 1.6, margin: 0, fontFamily: 'Inter, sans-serif' }}>{activity.starter}</p>
+                          </div>
+                        )}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+                          <button
+                            onClick={e => { e.stopPropagation(); handleRemove(activity); }}
+                            style={{ background: 'transparent', color: 'rgba(245,239,230,0.35)', border: '1px solid rgba(245,239,230,0.15)', borderRadius: '10px', padding: '8px 14px', fontSize: '0.82rem', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}
+                          >Remove from list</button>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ color: 'rgba(245,239,230,0.45)', fontSize: '0.8rem', fontFamily: 'Inter, sans-serif' }}>Include in recommendations</span>
+                            <div onClick={e => { e.stopPropagation(); onToggleDisabled(activity.id); }}
+                              style={{ width: '36px', height: '20px', borderRadius: '10px', background: isOff ? 'rgba(245,239,230,0.12)' : '#c4714f', position: 'relative', cursor: 'pointer', transition: 'background 0.2s', flexShrink: 0 }}>
+                              <div style={{ position: 'absolute', top: '2px', left: isOff ? '2px' : '16px', width: '16px', height: '16px', borderRadius: '50%', background: '#f5efe6', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    {!isExpanded && i < allActivities.length - 1 && (
                       <div style={{ height: '1px', background: 'rgba(245,239,230,0.055)', marginLeft: '16px' }} />
                     )}
                   </div>
@@ -1569,7 +1766,7 @@
           </div>
 
           {/* Right column — detail */}
-          <div style={{ flex: 1, height: '100%', overflowY: 'auto', padding: '36px 44px' }}>
+          <div className="activities-right-panel" style={{ flex: 1, height: '100%', overflowY: 'auto', padding: '36px 44px' }}>
             {!selectedActivity ? (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', opacity: 0.28 }}>
                 <div style={{ fontSize: '2rem', marginBottom: '10px' }}>🌙</div>
@@ -1974,6 +2171,136 @@
     }
 
     // ─────────────────────────────────────────────
+    //  INTENTION CARD (self-contained, used in Today + Journal)
+    // ─────────────────────────────────────────────
+    function IntentionCard({ intentionKey, isMonth, label, onStartReview }) {
+      const WEEK_FOCUS_WORDS  = ['Rest','Quiet','Connection','Creativity','Play','Movement','Presence','Nourishment'];
+      const MONTH_FOCUS_WORDS = ['Rest','Growth','Health','Simplicity','Gratitude','Creativity','Presence','Adventure'];
+      const wordPool  = isMonth ? MONTH_FOCUS_WORDS : WEEK_FOCUS_WORDS;
+      const emptyInt  = { sentence: '', items: [], focusWords: [] };
+
+      const [localInt,  setLocalInt]  = useState(() => loadIntention(intentionKey) || emptyInt);
+      const [editMode,  setEditMode]  = useState(false);
+      const [editForm,  setEditForm]  = useState(null);
+      const [itemInput, setItemInput] = useState('');
+
+      const hasContent = localInt.sentence || localInt.items.length > 0 || localInt.focusWords.length > 0;
+      const cardBg     = isMonth ? 'rgba(196,113,79,0.1)'   : 'rgba(245,239,230,0.04)';
+      const cardBorder = isMonth ? '1px solid rgba(196,113,79,0.18)' : '1px solid rgba(245,239,230,0.07)';
+      const editBorder = isMonth ? '1px solid rgba(196,113,79,0.45)' : '1px solid rgba(245,239,230,0.2)';
+
+      const ghostBtn = { background:'none', border:'1px solid rgba(245,239,230,0.14)', borderRadius:'6px', color:'rgba(245,239,230,0.38)', fontSize:'0.66rem', cursor:'pointer', padding:'3px 8px', fontFamily:'Inter, sans-serif' };
+      const pill     = (active) => ({ padding:'4px 11px', borderRadius:'40px', fontSize:'0.73rem', fontWeight:500, cursor:'pointer', border:'none', background: active ? '#c4714f' : 'rgba(245,239,230,0.08)', color: active ? '#f5efe6' : 'rgba(245,239,230,0.48)', transition:'all 0.15s', fontFamily:'Inter, sans-serif' });
+
+      function openEdit() {
+        setEditForm({ sentence: localInt.sentence||'', items: (localInt.items||[]).map(it=>({...it})), focusWords: [...(localInt.focusWords||[])] });
+        setItemInput('');
+        setEditMode(true);
+      }
+      function saveEdit() {
+        saveIntentionData(intentionKey, editForm);
+        setLocalInt(editForm);
+        setEditMode(false);
+        setEditForm(null);
+      }
+      function cancelEdit() { setEditMode(false); setEditForm(null); }
+      function addItem() {
+        const t = itemInput.trim(); if (!t) return;
+        setEditForm(f => ({...f, items: [...f.items, {text:t, checked:false}]}));
+        setItemInput('');
+      }
+      function toggleItem(idx) {
+        const updated = { ...localInt, items: localInt.items.map((it,i) => i===idx ? {...it, checked:!it.checked} : it) };
+        setLocalInt(updated);
+        saveIntentionData(intentionKey, updated);
+      }
+
+      return (
+        <div style={{ background:cardBg, border: editMode ? editBorder : cardBorder, borderRadius:'14px', padding:'14px 14px 12px', marginBottom:'12px', transition:'border-color 0.2s' }}>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'10px' }}>
+            <span style={{ color:'rgba(245,239,230,0.42)', fontSize:'0.67rem', fontWeight:600, letterSpacing:'0.08em', textTransform:'uppercase', fontFamily:'Inter, sans-serif' }}>{label}</span>
+            {!editMode && <button style={ghostBtn} onClick={openEdit}>Edit</button>}
+            {editMode  && <span style={{ color:'rgba(245,239,230,0.28)', fontSize:'0.63rem', fontFamily:'Inter, sans-serif' }}>editing</span>}
+          </div>
+
+          {editMode && editForm ? (
+            <div>
+              <textarea value={editForm.sentence} onChange={e=>setEditForm(f=>({...f,sentence:e.target.value}))}
+                placeholder={isMonth ? "What do you want this month to hold?" : "What do you want this week to feel like?"}
+                rows={2} autoFocus
+                style={{ width:'100%', boxSizing:'border-box', background:'rgba(245,239,230,0.06)', border:'1px solid rgba(245,239,230,0.14)', borderRadius:'8px', padding:'8px 10px', color:'#f5efe6', fontSize:'0.8rem', lineHeight:1.55, resize:'none', outline:'none', fontFamily:'Inter, sans-serif', marginBottom:'10px' }}
+              />
+              {editForm.items.length > 0 && (
+                <div style={{ display:'flex', flexDirection:'column', gap:'4px', marginBottom:'7px' }}>
+                  {editForm.items.map((item,i) => (
+                    <div key={i} style={{ display:'flex', alignItems:'center', gap:'6px' }}>
+                      <span style={{ flex:1, color:'rgba(245,239,230,0.6)', fontSize:'0.78rem', fontFamily:'Inter, sans-serif' }}>{item.text}</span>
+                      <button onClick={()=>setEditForm(f=>({...f,items:f.items.filter((_,j)=>j!==i)}))} style={{ background:'none', border:'none', color:'rgba(245,239,230,0.25)', cursor:'pointer', fontSize:'0.9rem', padding:'0 3px', lineHeight:1 }}>×</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div style={{ display:'flex', gap:'5px', marginBottom:'10px' }}>
+                <input value={itemInput} onChange={e=>setItemInput(e.target.value)}
+                  onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();addItem();}}}
+                  placeholder="Add intention..."
+                  style={{ flex:1, background:'rgba(245,239,230,0.05)', border:'1px solid rgba(245,239,230,0.1)', borderRadius:'6px', padding:'5px 8px', color:'#f5efe6', fontSize:'0.77rem', outline:'none', fontFamily:'Inter, sans-serif' }}
+                />
+                <button onClick={addItem} style={{ background:'rgba(245,239,230,0.07)', border:'none', borderRadius:'6px', color:'#f5efe6', width:'26px', cursor:'pointer', fontSize:'1rem', flexShrink:0 }}>+</button>
+              </div>
+              <div style={{ display:'flex', gap:'4px', flexWrap:'wrap', marginBottom:'12px' }}>
+                {wordPool.map(w => <button key={w} onClick={()=>setEditForm(f=>({...f,focusWords:f.focusWords.includes(w)?f.focusWords.filter(x=>x!==w):[...f.focusWords,w]}))} style={pill(editForm.focusWords.includes(w))}>{w}</button>)}
+              </div>
+              <div style={{ display:'flex', gap:'7px' }}>
+                <button onClick={saveEdit}
+                  style={{ flex:1, background:'#c4714f', color:'#f5efe6', border:'none', borderRadius:'8px', padding:'8px', fontSize:'0.76rem', fontWeight:600, cursor:'pointer', fontFamily:'Inter, sans-serif', transition:'background 0.2s' }}
+                  onMouseEnter={e=>e.currentTarget.style.background='#a35a3a'} onMouseLeave={e=>e.currentTarget.style.background='#c4714f'}>Save</button>
+                <button onClick={cancelEdit}
+                  style={{ flex:1, background:'transparent', color:'rgba(245,239,230,0.45)', border:'1px solid rgba(245,239,230,0.12)', borderRadius:'8px', padding:'8px', fontSize:'0.76rem', cursor:'pointer', fontFamily:'Inter, sans-serif' }}>Cancel</button>
+              </div>
+            </div>
+          ) : (
+            <>
+              {!hasContent ? (
+                <p style={{ color:'rgba(245,239,230,0.22)', fontSize:'0.8rem', fontStyle:'italic', fontFamily:'Lora, serif', lineHeight:1.5 }}>No intention set yet.</p>
+              ) : (
+                <>
+                  {localInt.sentence && (
+                    <p className="font-serif" style={{ color:'rgba(245,239,230,0.72)', fontSize:'0.83rem', fontStyle:'italic', lineHeight:1.55, marginBottom:(localInt.items.length>0||localInt.focusWords.length>0)?'10px':'0' }}>"{localInt.sentence}"</p>
+                  )}
+                  {localInt.items.length > 0 && (
+                    <div style={{ display:'flex', flexDirection:'column', gap:'6px', marginBottom:localInt.focusWords.length>0?'10px':'0' }}>
+                      {localInt.items.map((item,i) => (
+                        <div key={i} onClick={()=>toggleItem(i)} style={{ display:'flex', alignItems:'flex-start', gap:'8px', cursor:'pointer' }}>
+                          <div style={{ width:'15px', height:'15px', borderRadius:'50%', flexShrink:0, marginTop:'1px', border:item.checked?'none':'1.5px solid rgba(245,239,230,0.28)', background:item.checked?'#c4714f':'transparent', display:'flex', alignItems:'center', justifyContent:'center', transition:'all 0.15s' }}>
+                            {item.checked && <span style={{ color:'#f5efe6', fontSize:'8px', lineHeight:1 }}>✓</span>}
+                          </div>
+                          <span style={{ color:item.checked?'rgba(245,239,230,0.28)':'rgba(245,239,230,0.68)', fontSize:'0.8rem', lineHeight:1.45, textDecoration:item.checked?'line-through':'none', fontFamily:'Inter, sans-serif' }}>{item.text}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {localInt.focusWords.length > 0 && (
+                    <div style={{ display:'flex', gap:'4px', flexWrap:'wrap' }}>
+                      {localInt.focusWords.map(w => <span key={w} style={{ background:'rgba(196,113,79,0.2)', color:'#e8987a', borderRadius:'20px', padding:'2px 9px', fontSize:'0.7rem', fontFamily:'Inter, sans-serif' }}>{w}</span>)}
+                    </div>
+                  )}
+                </>
+              )}
+              {onStartReview && (
+                <button onClick={onStartReview}
+                  style={{ width:'100%', background:'rgba(245,239,230,0.05)', border:'1px solid rgba(245,239,230,0.1)', borderRadius:'9px', color:'rgba(245,239,230,0.5)', fontSize:'0.76rem', fontWeight:500, cursor:'pointer', padding:'8px', marginTop:'12px', fontFamily:'Inter, sans-serif', transition:'all 0.2s' }}
+                  onMouseEnter={e=>{e.currentTarget.style.background='rgba(245,239,230,0.09)';e.currentTarget.style.color='rgba(245,239,230,0.8)';}}
+                  onMouseLeave={e=>{e.currentTarget.style.background='rgba(245,239,230,0.05)';e.currentTarget.style.color='rgba(245,239,230,0.5)';}}
+                >{isMonth ? `Review ${new Date().toLocaleDateString('en-US',{month:'long'})} →` : 'Review this week →'}</button>
+              )}
+            </>
+          )}
+        </div>
+      );
+    }
+
+    // ─────────────────────────────────────────────
     //  CALENDAR SCREEN
     // ─────────────────────────────────────────────
     function CalendarScreen({ onBack, onWrite }) {
@@ -1996,17 +2323,9 @@
         return dates;
       });
 
-      // ── Intention state ───────────────────────────
-      const weekKey    = getWeekKey(now);
-      const monthKey   = getMonthKey(now.getFullYear(), now.getMonth());
-      const emptyInt   = { sentence: '', items: [], focusWords: [] };
-
-      const [weekInt,        setWeekInt]        = useState(() => loadIntention(weekKey)  || emptyInt);
-      const [monthInt,       setMonthInt]        = useState(() => loadIntention(monthKey) || emptyInt);
-      const [weekForm,       setWeekForm]        = useState(() => loadIntention(weekKey)  || emptyInt);
-      const [monthForm,      setMonthForm]       = useState(() => loadIntention(monthKey) || emptyInt);
-      const [weekItemInput,  setWeekItemInput]   = useState('');
-      const [monthItemInput, setMonthItemInput]  = useState('');
+      // ── Intention keys ────────────────────────────
+      const weekKey  = getWeekKey(now);
+      const monthKey = getMonthKey(now.getFullYear(), now.getMonth());
 
       // ── Review state ──────────────────────────────
       const [reviewType,      setReviewType]      = useState(null);
@@ -2016,13 +2335,9 @@
       const [reviewSaved,     setReviewSaved]     = useState(false);
       const [reviewExitAsk,   setReviewExitAsk]   = useState(false);
 
-      const weekSentenceRef  = useRef(null);
-      const monthSentenceRef = useRef(null);
-
-      // ── Inline card edit state ────────────────────
-      const [cardEditMode,      setCardEditMode]      = useState(null); // null | intention key string
-      const [cardEditForm,      setCardEditForm]      = useState(null);
-      const [cardEditItemInput, setCardEditItemInput] = useState('');
+      // ── Left panel sub-tab ────────────────────────
+      const isMobile = window.innerWidth < 768;
+      const [leftTab, setLeftTab] = useState(isMobile ? 'calendar' : 'intentions');
 
       // ── Left/right column month navigators ────────
       const [intNavYear,  setIntNavYear]  = useState(now.getFullYear());
@@ -2032,11 +2347,6 @@
 
       // ── Force re-read of intentions/reviews ───────
       const [intRefresh,  setIntRefresh]  = useState(0);
-
-      // ── Today card state ──────────────────────────
-      const [todayEditMode,       setTodayEditMode]       = useState(false);
-      const [todayEditData,       setTodayEditData]       = useState(null);
-      const [todayDeleteConfirm,  setTodayDeleteConfirm]  = useState(false);
 
       // ── Review intent key ─────────────────────────
       const [reviewIntKey, setReviewIntKey] = useState(null);
@@ -2165,28 +2475,6 @@
         drained: { bg: '#F5DDD8', text: '#712B13', label: 'Low'  },
       };
 
-      // ── Intention helpers ─────────────────────────
-      function toggleItemCheck(type, idx) {
-        if (type === 'week') {
-          const upd = { ...weekInt, items: weekInt.items.map((it, i) => i === idx ? { ...it, checked: !it.checked } : it) };
-          setWeekInt(upd); setWeekForm(upd); saveIntentionData(weekKey, upd);
-        } else {
-          const upd = { ...monthInt, items: monthInt.items.map((it, i) => i === idx ? { ...it, checked: !it.checked } : it) };
-          setMonthInt(upd); setMonthForm(upd); saveIntentionData(monthKey, upd);
-        }
-      }
-
-      function addWeekItem()  { const t = weekItemInput.trim();  if (!t) return; setWeekForm(f  => ({ ...f, items: [...f.items,  { text: t, checked: false }] })); setWeekItemInput(''); }
-      function addMonthItem() { const t = monthItemInput.trim(); if (!t) return; setMonthForm(f => ({ ...f, items: [...f.items, { text: t, checked: false }] })); setMonthItemInput(''); }
-      function removeWeekItem(i)  { setWeekForm(f  => ({ ...f, items: f.items.filter((_,j) => j !== i) })); }
-      function removeMonthItem(i) { setMonthForm(f => ({ ...f, items: f.items.filter((_,j) => j !== i) })); }
-
-      function saveWeekIntention()  { setWeekInt(weekForm);   saveIntentionData(weekKey,  weekForm);  }
-      function saveMonthIntention() { setMonthInt(monthForm); saveIntentionData(monthKey, monthForm); }
-
-      const WEEK_FOCUS_WORDS  = ['Rest','Quiet','Connection','Creativity','Play','Movement','Presence','Nourishment'];
-      const MONTH_FOCUS_WORDS = ['Rest','Growth','Health','Simplicity','Gratitude','Creativity','Presence','Adventure'];
-
       // ── Review data ───────────────────────────────
       const WEEK_QUESTIONS = [
         { type: 'options', q: 'Did this week feel like you intended it to?', options: ['Fully','Mostly','Not really'], hasText: true, textPlaceholder: 'Tell me more...' },
@@ -2275,260 +2563,6 @@
       function loadReviewForKey(type, intKey) {
         const suffix = intKey.replace(`intention_${type}_`, '');
         return loadIntention(`review_${type}_${suffix}`);
-      }
-
-      // Today's entry helpers
-      const todayEntry = loadJournalEntry(today);
-
-      function enterTodayEditMode() {
-        if (!todayEntry) return;
-        setTodayEditData({
-          energyLevel: todayEntry.energyLevel || '',
-          mentalState: todayEntry.mentalState || '',
-          prompts: (todayEntry.prompts || []).map(p => ({ ...p })),
-          notes: todayEntry.notes || '',
-        });
-        setTodayEditMode(true);
-        setTodayDeleteConfirm(false);
-      }
-
-      function handleSaveTodayEdit() {
-        if (!todayEditData || !todayEntry) return;
-        const updated = { ...todayEntry, ...todayEditData };
-        try { localStorage.setItem(`journal_${today}`, JSON.stringify(updated)); } catch {}
-        setTodayEditMode(false);
-        setTodayEditData(null);
-        setEntryDates(prev => { const n = new Set(prev); n.add(today); return n; });
-      }
-
-      function handleDeleteTodayEntry() {
-        try { localStorage.removeItem(`journal_${today}`); } catch {}
-        const nd = new Set(entryDates); nd.delete(today); setEntryDates(nd);
-        setTodayDeleteConfirm(false);
-        setTodayEditMode(false);
-        setTodayEditData(null);
-      }
-
-      // ── Style helpers ─────────────────────────────
-      const focusPill = (active) => ({
-        padding: '4px 11px', borderRadius: '40px', fontSize: '0.73rem', fontWeight: 500,
-        cursor: 'pointer', border: 'none',
-        background: active ? '#c4714f' : 'rgba(245,239,230,0.08)',
-        color:      active ? '#f5efe6' : 'rgba(245,239,230,0.48)',
-        transition: 'all 0.15s', fontFamily: 'Inter, sans-serif',
-      });
-      const secLabel = { color: 'rgba(245,239,230,0.35)', fontSize: '0.66rem', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '7px', display: 'block', fontFamily: 'Inter, sans-serif' };
-      const ghostEditBtn = { background: 'none', border: '1px solid rgba(245,239,230,0.14)', borderRadius: '6px', color: 'rgba(245,239,230,0.38)', fontSize: '0.66rem', cursor: 'pointer', padding: '3px 8px', fontFamily: 'Inter, sans-serif' };
-
-      // ── Left column: intention card renderer ──────
-      function renderIntentionCard(cardLabel, intention, type, isMonth) {
-        const hasContent  = intention.sentence || intention.items.length > 0 || intention.focusWords.length > 0;
-        const cardBg      = isMonth ? 'rgba(196,113,79,0.1)' : 'rgba(245,239,230,0.04)';
-        const cardBorder  = isMonth ? '1px solid rgba(196,113,79,0.18)' : '1px solid rgba(245,239,230,0.07)';
-        const isEditing   = cardEditMode === type;
-        const wordPool    = isMonth ? MONTH_FOCUS_WORDS : WEEK_FOCUS_WORDS;
-
-        function openCardEdit() {
-          setCardEditForm({ sentence: intention.sentence || '', items: (intention.items || []).map(it => ({ ...it })), focusWords: [...(intention.focusWords || [])] });
-          setCardEditItemInput('');
-          setCardEditMode(type);
-        }
-
-        function saveCardEdit() {
-          const key = isMonth ? monthKey : weekKey;
-          saveIntentionData(key, cardEditForm);
-          if (isMonth) { setMonthInt(cardEditForm); setMonthForm(cardEditForm); }
-          else         { setWeekInt(cardEditForm);  setWeekForm(cardEditForm); }
-          setCardEditMode(null);
-          setCardEditForm(null);
-        }
-
-        function cancelCardEdit() {
-          setCardEditMode(null);
-          setCardEditForm(null);
-        }
-
-        function addCardItem() {
-          const text = cardEditItemInput.trim();
-          if (!text) return;
-          setCardEditForm(f => ({ ...f, items: [...f.items, { text, checked: false }] }));
-          setCardEditItemInput('');
-        }
-
-        function toggleCardWord(w) {
-          setCardEditForm(f => ({ ...f, focusWords: f.focusWords.includes(w) ? f.focusWords.filter(x => x !== w) : [...f.focusWords, w] }));
-        }
-
-        return (
-          <div style={{ background: cardBg, border: isEditing ? (isMonth ? '1px solid rgba(196,113,79,0.45)' : '1px solid rgba(245,239,230,0.2)') : cardBorder, borderRadius: '14px', padding: '14px 14px 12px', marginBottom: '12px', transition: 'border-color 0.2s' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-              <span style={{ color: 'rgba(245,239,230,0.42)', fontSize: '0.67rem', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: 'Inter, sans-serif' }}>{cardLabel}</span>
-              {!isEditing && <button style={ghostEditBtn} onClick={openCardEdit}>Edit</button>}
-              {isEditing  && <span style={{ color: 'rgba(245,239,230,0.28)', fontSize: '0.63rem', fontFamily: 'Inter, sans-serif' }}>editing</span>}
-            </div>
-
-            {isEditing && cardEditForm ? (
-              /* ── Inline edit form ── */
-              <div>
-                <textarea
-                  value={cardEditForm.sentence}
-                  onChange={e => setCardEditForm(f => ({ ...f, sentence: e.target.value }))}
-                  placeholder={isMonth ? "What do you want this month to hold?" : "What do you want this week to feel like?"}
-                  rows={2}
-                  autoFocus
-                  style={{ width: '100%', boxSizing: 'border-box', background: 'rgba(245,239,230,0.06)', border: '1px solid rgba(245,239,230,0.14)', borderRadius: '8px', padding: '8px 10px', color: '#f5efe6', fontSize: '0.8rem', lineHeight: 1.55, resize: 'none', outline: 'none', fontFamily: 'Inter, sans-serif', marginBottom: '10px' }}
-                />
-
-                {cardEditForm.items.length > 0 && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '7px' }}>
-                    {cardEditForm.items.map((item, i) => (
-                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <span style={{ flex: 1, color: 'rgba(245,239,230,0.6)', fontSize: '0.78rem', fontFamily: 'Inter, sans-serif' }}>{item.text}</span>
-                        <button onClick={() => setCardEditForm(f => ({ ...f, items: f.items.filter((_, j) => j !== i) }))} style={{ background: 'none', border: 'none', color: 'rgba(245,239,230,0.25)', cursor: 'pointer', fontSize: '0.9rem', padding: '0 3px', lineHeight: 1 }}>×</button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                <div style={{ display: 'flex', gap: '5px', marginBottom: '10px' }}>
-                  <input
-                    value={cardEditItemInput}
-                    onChange={e => setCardEditItemInput(e.target.value)}
-                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCardItem(); } }}
-                    placeholder="Add intention..."
-                    style={{ flex: 1, background: 'rgba(245,239,230,0.05)', border: '1px solid rgba(245,239,230,0.1)', borderRadius: '6px', padding: '5px 8px', color: '#f5efe6', fontSize: '0.77rem', outline: 'none', fontFamily: 'Inter, sans-serif' }}
-                  />
-                  <button onClick={addCardItem} style={{ background: 'rgba(245,239,230,0.07)', border: 'none', borderRadius: '6px', color: '#f5efe6', width: '26px', cursor: 'pointer', fontSize: '1rem', flexShrink: 0 }}>+</button>
-                </div>
-
-                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginBottom: '12px' }}>
-                  {wordPool.map(w => (
-                    <button key={w} onClick={() => toggleCardWord(w)} style={focusPill(cardEditForm.focusWords.includes(w))}>{w}</button>
-                  ))}
-                </div>
-
-                <div style={{ display: 'flex', gap: '7px' }}>
-                  <button onClick={saveCardEdit}
-                    style={{ flex: 1, background: '#c4714f', color: '#f5efe6', border: 'none', borderRadius: '8px', padding: '8px', fontSize: '0.76rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'Inter, sans-serif', transition: 'background 0.2s' }}
-                    onMouseEnter={e => e.currentTarget.style.background='#a35a3a'}
-                    onMouseLeave={e => e.currentTarget.style.background='#c4714f'}
-                  >Save</button>
-                  <button onClick={cancelCardEdit}
-                    style={{ flex: 1, background: 'transparent', color: 'rgba(245,239,230,0.45)', border: '1px solid rgba(245,239,230,0.12)', borderRadius: '8px', padding: '8px', fontSize: '0.76rem', cursor: 'pointer', fontFamily: 'Inter, sans-serif', transition: 'all 0.2s' }}
-                    onMouseEnter={e => { e.currentTarget.style.borderColor='rgba(245,239,230,0.28)'; e.currentTarget.style.color='rgba(245,239,230,0.7)'; }}
-                    onMouseLeave={e => { e.currentTarget.style.borderColor='rgba(245,239,230,0.12)'; e.currentTarget.style.color='rgba(245,239,230,0.45)'; }}
-                  >Cancel</button>
-                </div>
-              </div>
-            ) : (
-              /* ── Read mode ── */
-              <>
-                {!hasContent ? (
-                  <p style={{ color: 'rgba(245,239,230,0.22)', fontSize: '0.8rem', fontStyle: 'italic', fontFamily: 'Lora, serif', lineHeight: 1.5 }}>No intention set yet.</p>
-                ) : (
-                  <>
-                    {intention.sentence && (
-                      <p className="font-serif" style={{ color: 'rgba(245,239,230,0.72)', fontSize: '0.83rem', fontStyle: 'italic', lineHeight: 1.55, marginBottom: (intention.items.length > 0 || intention.focusWords.length > 0) ? '10px' : '0' }}>
-                        "{intention.sentence}"
-                      </p>
-                    )}
-                    {intention.items.length > 0 && (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: intention.focusWords.length > 0 ? '10px' : '0' }}>
-                        {intention.items.map((item, i) => (
-                          <div key={i} onClick={() => toggleItemCheck(type, i)} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', cursor: 'pointer' }}>
-                            <div style={{ width: '15px', height: '15px', borderRadius: '50%', flexShrink: 0, marginTop: '1px', border: item.checked ? 'none' : '1.5px solid rgba(245,239,230,0.28)', background: item.checked ? '#c4714f' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }}>
-                              {item.checked && <span style={{ color: '#f5efe6', fontSize: '8px', lineHeight: 1 }}>✓</span>}
-                            </div>
-                            <span style={{ color: item.checked ? 'rgba(245,239,230,0.28)' : 'rgba(245,239,230,0.68)', fontSize: '0.8rem', lineHeight: 1.45, textDecoration: item.checked ? 'line-through' : 'none', fontFamily: 'Inter, sans-serif' }}>{item.text}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    {intention.focusWords.length > 0 && (
-                      <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                        {intention.focusWords.map(w => (
-                          <span key={w} style={{ background: 'rgba(196,113,79,0.2)', color: '#e8987a', borderRadius: '20px', padding: '2px 9px', fontSize: '0.7rem', fontFamily: 'Inter, sans-serif' }}>{w}</span>
-                        ))}
-                      </div>
-                    )}
-                  </>
-                )}
-
-                <button
-                  onClick={() => startReview(type)}
-                  style={{ width: '100%', background: 'rgba(245,239,230,0.05)', border: '1px solid rgba(245,239,230,0.1)', borderRadius: '9px', color: 'rgba(245,239,230,0.5)', fontSize: '0.76rem', fontWeight: 500, cursor: 'pointer', padding: '8px', marginTop: '12px', fontFamily: 'Inter, sans-serif', transition: 'all 0.2s' }}
-                  onMouseEnter={e => { e.currentTarget.style.background='rgba(245,239,230,0.09)'; e.currentTarget.style.color='rgba(245,239,230,0.8)'; }}
-                  onMouseLeave={e => { e.currentTarget.style.background='rgba(245,239,230,0.05)'; e.currentTarget.style.color='rgba(245,239,230,0.5)'; }}
-                >
-                  {isMonth ? `Review ${MONTH_NAMES[now.getMonth()]} →` : 'Review this week →'}
-                </button>
-              </>
-            )}
-          </div>
-        );
-      }
-
-      // ── Right column: intention form renderer ─────
-      function renderIntentionForm(isMonth) {
-        const form      = isMonth ? monthForm      : weekForm;
-        const setForm   = isMonth ? setMonthForm    : setWeekForm;
-        const itemInput = isMonth ? monthItemInput  : weekItemInput;
-        const setInput  = isMonth ? setMonthItemInput : setWeekItemInput;
-        const addItem   = isMonth ? addMonthItem    : addWeekItem;
-        const removeItem= isMonth ? removeMonthItem : removeWeekItem;
-        const wordPool  = isMonth ? MONTH_FOCUS_WORDS : WEEK_FOCUS_WORDS;
-        const sentRef   = isMonth ? monthSentenceRef  : weekSentenceRef;
-        const onSave    = isMonth ? saveMonthIntention : saveWeekIntention;
-        const title     = isMonth ? `Set ${MONTH_NAMES[now.getMonth()]}'s intention` : "Set this week's intention";
-        const ph        = isMonth ? "What do you want this month to hold?" : "What do you want this week to feel like?";
-        const saveLabel = isMonth ? "Save month intention" : "Save week intention";
-
-        const toggleWord = (w) => setForm(f => ({
-          ...f, focusWords: f.focusWords.includes(w) ? f.focusWords.filter(x => x !== w) : [...f.focusWords, w]
-        }));
-
-        return (
-          <div style={{ marginBottom: isMonth ? 0 : '22px' }}>
-            <p style={{ color: 'rgba(245,239,230,0.38)', fontSize: '0.67rem', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '10px', fontFamily: 'Inter, sans-serif' }}>{title}</p>
-            <div style={{ background: 'rgba(245,239,230,0.04)', border: '1px solid rgba(245,239,230,0.07)', borderRadius: '14px', padding: '13px' }}>
-
-              <span style={secLabel}>One sentence</span>
-              <textarea ref={sentRef} value={form.sentence} onChange={e => setForm(f => ({ ...f, sentence: e.target.value }))} placeholder={ph} rows={2}
-                style={{ width: '100%', boxSizing: 'border-box', background: 'rgba(245,239,230,0.05)', border: '1px solid rgba(245,239,230,0.1)', borderRadius: '9px', padding: '9px 11px', color: '#f5efe6', fontSize: '0.83rem', lineHeight: 1.6, resize: 'none', outline: 'none', fontFamily: 'Inter, sans-serif', marginBottom: '13px' }}
-              />
-
-              <span style={secLabel}>Add intentions</span>
-              {form.items.length > 0 && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', marginBottom: '7px' }}>
-                  {form.items.map((item, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
-                      <div style={{ width: '13px', height: '13px', borderRadius: '50%', flexShrink: 0, border: '1.5px solid rgba(245,239,230,0.22)', background: item.checked ? '#c4714f' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        {item.checked && <span style={{ color: '#f5efe6', fontSize: '7px' }}>✓</span>}
-                      </div>
-                      <span style={{ flex: 1, color: 'rgba(245,239,230,0.6)', fontSize: '0.8rem', fontFamily: 'Inter, sans-serif' }}>{item.text}</span>
-                      <button onClick={() => removeItem(i)} style={{ background: 'none', border: 'none', color: 'rgba(245,239,230,0.22)', cursor: 'pointer', fontSize: '0.9rem', padding: '0 3px', lineHeight: 1 }}>×</button>
-                    </div>
-                  ))}
-                </div>
-              )}
-              <div style={{ display: 'flex', gap: '5px', marginBottom: '13px' }}>
-                <input value={itemInput} onChange={e => setInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addItem(); } }} placeholder="Add an intention..."
-                  style={{ flex: 1, background: 'rgba(245,239,230,0.05)', border: '1px solid rgba(245,239,230,0.1)', borderRadius: '7px', padding: '7px 10px', color: '#f5efe6', fontSize: '0.8rem', outline: 'none', fontFamily: 'Inter, sans-serif' }} />
-                <button onClick={addItem} style={{ background: 'rgba(245,239,230,0.07)', border: 'none', borderRadius: '7px', color: '#f5efe6', width: '30px', cursor: 'pointer', fontSize: '1rem', flexShrink: 0 }}>+</button>
-              </div>
-
-              <span style={secLabel}>Focus words</span>
-              <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginBottom: '14px' }}>
-                {wordPool.map(w => <button key={w} onClick={() => toggleWord(w)} style={focusPill(form.focusWords.includes(w))}>{w}</button>)}
-              </div>
-
-              <button onClick={onSave}
-                style={{ width: '100%', background: '#c4714f', color: '#f5efe6', border: 'none', borderRadius: '9px', padding: '10px', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'Inter, sans-serif', transition: 'background 0.2s' }}
-                onMouseEnter={e => e.currentTarget.style.background='#a35a3a'}
-                onMouseLeave={e => e.currentTarget.style.background='#c4714f'}
-              >{saveLabel}</button>
-            </div>
-          </div>
-        );
       }
 
       // ── Review overlay ────────────────────────────
@@ -2631,325 +2665,312 @@
       const revMonthKey = getMonthKey(revNavYear, revNavMonth);
       const revWeeks    = getWeeksForMonth(revNavYear, revNavMonth);
 
-      function NavArrows({ year, month, onPrev, onNext, label }) {
+      function NavArrows({ onPrev, onNext, label }) {
         return (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <button onClick={onPrev} style={{ background: 'none', border: 'none', color: 'rgba(245,239,230,0.38)', fontSize: '1rem', cursor: 'pointer', padding: '2px 6px', lineHeight: 1 }}
-              onMouseEnter={e => e.currentTarget.style.color='rgba(245,239,230,0.7)'}
-              onMouseLeave={e => e.currentTarget.style.color='rgba(245,239,230,0.38)'}
+          <div style={{ display:'flex', alignItems:'center', gap:'4px' }}>
+            <button onClick={onPrev} style={{ background:'none', border:'none', color:'rgba(245,239,230,0.38)', fontSize:'1rem', cursor:'pointer', padding:'2px 6px', lineHeight:1 }}
+              onMouseEnter={e=>e.currentTarget.style.color='rgba(245,239,230,0.7)'}
+              onMouseLeave={e=>e.currentTarget.style.color='rgba(245,239,230,0.38)'}
             >‹</button>
-            <span style={{ color: 'rgba(245,239,230,0.55)', fontSize: '0.74rem', fontFamily: 'Inter, sans-serif', minWidth: '88px', textAlign: 'center' }}>{label}</span>
-            <button onClick={onNext} style={{ background: 'none', border: 'none', color: 'rgba(245,239,230,0.38)', fontSize: '1rem', cursor: 'pointer', padding: '2px 6px', lineHeight: 1 }}
-              onMouseEnter={e => e.currentTarget.style.color='rgba(245,239,230,0.7)'}
-              onMouseLeave={e => e.currentTarget.style.color='rgba(245,239,230,0.38)'}
+            <span style={{ color:'rgba(245,239,230,0.55)', fontSize:'0.74rem', fontFamily:'Inter, sans-serif', minWidth:'88px', textAlign:'center' }}>{label}</span>
+            <button onClick={onNext} style={{ background:'none', border:'none', color:'rgba(245,239,230,0.38)', fontSize:'1rem', cursor:'pointer', padding:'2px 6px', lineHeight:1 }}
+              onMouseEnter={e=>e.currentTarget.style.color='rgba(245,239,230,0.7)'}
+              onMouseLeave={e=>e.currentTarget.style.color='rgba(245,239,230,0.38)'}
             >›</button>
           </div>
         );
       }
 
-      function prevIntMonth() { if (intNavMonth===0){setIntNavYear(y=>y-1);setIntNavMonth(11);}else setIntNavMonth(m=>m-1); }
-      function nextIntMonth() { if (intNavMonth===11){setIntNavYear(y=>y+1);setIntNavMonth(0);}else setIntNavMonth(m=>m+1); }
-      function prevRevMonth() { if (revNavMonth===0){setRevNavYear(y=>y-1);setRevNavMonth(11);}else setRevNavMonth(m=>m-1); }
-      function nextRevMonth() { if (revNavMonth===11){setRevNavYear(y=>y+1);setRevNavMonth(0);}else setRevNavMonth(m=>m+1); }
+      function prevIntMonth() { if(intNavMonth===0){setIntNavYear(y=>y-1);setIntNavMonth(11);}else setIntNavMonth(m=>m-1); }
+      function nextIntMonth() { if(intNavMonth===11){setIntNavYear(y=>y+1);setIntNavMonth(0);}else setIntNavMonth(m=>m+1); }
+      function prevRevMonth() { if(revNavMonth===0){setRevNavYear(y=>y-1);setRevNavMonth(11);}else setRevNavMonth(m=>m-1); }
+      function nextRevMonth() { if(revNavMonth===11){setRevNavYear(y=>y+1);setRevNavMonth(0);}else setRevNavMonth(m=>m+1); }
 
       return (
-        <div style={{ width: '100%', height: 'calc(100vh - 56px)', display: 'flex', position: 'relative', overflow: 'hidden' }}>
+        <div style={{ width:'100%', height:'calc(100vh - 56px)', display:'flex', position:'relative', overflow:'hidden' }}>
 
-          {/* ── Left column: Intentions ── */}
-          <div style={{ width: '440px', flexShrink: 0, borderRight: '0.5px solid rgba(245,239,230,0.08)', overflowY: 'auto', padding: '18px 18px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-              <span style={{ color: 'rgba(245,239,230,0.55)', fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: 'Inter, sans-serif' }}>Intentions</span>
-              <NavArrows year={intNavYear} month={intNavMonth} onPrev={prevIntMonth} onNext={nextIntMonth} label={`${MONTH_NAMES[intNavMonth].slice(0,3)} ${intNavYear}`} />
+          {/* ── Left panel ── */}
+          <div className="journal-left-panel" style={{ width:'400px', flexShrink:0, borderRight:'0.5px solid rgba(245,239,230,0.08)', display:'flex', flexDirection:'column', overflow:'hidden' }}>
+
+            {/* Sub-tabs — desktop shows Intentions·Reviews; mobile adds Calendar as first */}
+            <div style={{ display:'flex', borderBottom:'0.5px solid rgba(245,239,230,0.08)', padding:'0 18px', flexShrink:0 }}>
+              {/* Calendar tab — mobile only */}
+              <button className="journal-mobile-tabs" onClick={()=>setLeftTab('calendar')}
+                style={{ background:'none', border:'none', borderBottom:leftTab==='calendar'?'2px solid #c4714f':'2px solid transparent', color:leftTab==='calendar'?'#f5efe6':'rgba(245,239,230,0.42)', fontFamily:'Inter, sans-serif', fontSize:'0.875rem', fontWeight:leftTab==='calendar'?600:400, cursor:'pointer', padding:'14px 20px 12px', transition:'all 0.2s', marginRight:'4px', alignItems:'center' }}
+              >Calendar</button>
+              {['intentions','reviews'].map(tab => (
+                <button key={tab} onClick={()=>setLeftTab(tab)}
+                  style={{ background:'none', border:'none', borderBottom:leftTab===tab?'2px solid #c4714f':'2px solid transparent', color:leftTab===tab?'#f5efe6':'rgba(245,239,230,0.42)', fontFamily:'Inter, sans-serif', fontSize:'0.875rem', fontWeight:leftTab===tab?600:400, cursor:'pointer', padding:'14px 20px 12px', transition:'all 0.2s', marginRight:'4px' }}
+                >{tab==='intentions'?'Intentions':'Reviews'}</button>
+              ))}
             </div>
 
-            {/* Month intention card */}
-            {(() => {
-              const intKey = intMonthKey;
-              const intention = loadIntention(intKey) || { sentence: '', items: [], focusWords: [] };
-              const hasContent = intention.sentence || intention.items.length > 0 || intention.focusWords.length > 0;
-              const isEditing = cardEditMode === intKey;
-              return (
-                <div style={{ background: 'rgba(196,113,79,0.1)', border: isEditing ? '1px solid rgba(196,113,79,0.45)' : '1px solid rgba(196,113,79,0.18)', borderRadius: '13px', padding: '12px', marginBottom: '8px', transition: 'border-color 0.2s' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                    <span style={{ color: 'rgba(245,239,230,0.42)', fontSize: '0.63rem', fontWeight: 700, letterSpacing: '0.09em', textTransform: 'uppercase', fontFamily: 'Inter, sans-serif' }}>{MONTH_NAMES[intNavMonth]} intention</span>
-                    {!isEditing && <button style={ghostEditBtn} onClick={() => { setCardEditForm({ sentence: intention.sentence||'', items: (intention.items||[]).map(it=>({...it})), focusWords: [...(intention.focusWords||[])] }); setCardEditItemInput(''); setCardEditMode(intKey); }}>Edit</button>}
-                    {isEditing && <span style={{ color: 'rgba(245,239,230,0.28)', fontSize: '0.6rem', fontFamily: 'Inter, sans-serif' }}>editing</span>}
-                  </div>
-                  {isEditing && cardEditForm ? (
-                    <div>
-                      <textarea value={cardEditForm.sentence} onChange={e => setCardEditForm(f=>({...f,sentence:e.target.value}))} placeholder="What do you want this month to hold?" rows={2} autoFocus
-                        style={{ width:'100%', boxSizing:'border-box', background:'rgba(245,239,230,0.06)', border:'1px solid rgba(245,239,230,0.14)', borderRadius:'7px', padding:'7px 9px', color:'#f5efe6', fontSize:'0.77rem', lineHeight:1.5, resize:'none', outline:'none', fontFamily:'Inter, sans-serif', marginBottom:'8px' }} />
-                      {cardEditForm.items.length > 0 && (
-                        <div style={{ display:'flex', flexDirection:'column', gap:'3px', marginBottom:'5px' }}>
-                          {cardEditForm.items.map((item,i) => (
-                            <div key={i} style={{ display:'flex', alignItems:'center', gap:'5px' }}>
-                              <span style={{ flex:1, color:'rgba(245,239,230,0.6)', fontSize:'0.74rem', fontFamily:'Inter, sans-serif' }}>{item.text}</span>
-                              <button onClick={() => setCardEditForm(f=>({...f,items:f.items.filter((_,j)=>j!==i)}))} style={{ background:'none', border:'none', color:'rgba(245,239,230,0.25)', cursor:'pointer', fontSize:'0.85rem', padding:'0 2px', lineHeight:1 }}>×</button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      <div style={{ display:'flex', gap:'4px', marginBottom:'8px' }}>
-                        <input value={cardEditItemInput} onChange={e=>setCardEditItemInput(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();const t=cardEditItemInput.trim();if(t){setCardEditForm(f=>({...f,items:[...f.items,{text:t,checked:false}]}));setCardEditItemInput('');}}} } placeholder="Add intention..." style={{ flex:1, background:'rgba(245,239,230,0.05)', border:'1px solid rgba(245,239,230,0.1)', borderRadius:'5px', padding:'4px 7px', color:'#f5efe6', fontSize:'0.73rem', outline:'none', fontFamily:'Inter, sans-serif' }} />
-                        <button onClick={() => { const t=cardEditItemInput.trim(); if(t){setCardEditForm(f=>({...f,items:[...f.items,{text:t,checked:false}]}));setCardEditItemInput('');} }} style={{ background:'rgba(245,239,230,0.07)', border:'none', borderRadius:'5px', color:'#f5efe6', width:'24px', cursor:'pointer', fontSize:'0.95rem', flexShrink:0 }}>+</button>
-                      </div>
-                      <div style={{ display:'flex', gap:'3px', flexWrap:'wrap', marginBottom:'9px' }}>
-                        {MONTH_FOCUS_WORDS.map(w => <button key={w} onClick={() => setCardEditForm(f=>({...f,focusWords:f.focusWords.includes(w)?f.focusWords.filter(x=>x!==w):[...f.focusWords,w]}))} style={focusPill(cardEditForm.focusWords.includes(w))}>{w}</button>)}
-                      </div>
-                      <div style={{ display:'flex', gap:'5px' }}>
-                        <button onClick={() => { saveIntentionData(intKey, cardEditForm); if(intKey===monthKey){setMonthInt(cardEditForm);setMonthForm(cardEditForm);} setCardEditMode(null); setCardEditForm(null); setIntRefresh(r=>r+1); }}
-                          style={{ flex:1, background:'#c4714f', color:'#f5efe6', border:'none', borderRadius:'7px', padding:'7px', fontSize:'0.72rem', fontWeight:600, cursor:'pointer', fontFamily:'Inter, sans-serif' }}
-                          onMouseEnter={e=>e.currentTarget.style.background='#a35a3a'} onMouseLeave={e=>e.currentTarget.style.background='#c4714f'}>Save</button>
-                        <button onClick={() => { setCardEditMode(null); setCardEditForm(null); }} style={{ flex:1, background:'transparent', color:'rgba(245,239,230,0.45)', border:'1px solid rgba(245,239,230,0.12)', borderRadius:'7px', padding:'7px', fontSize:'0.72rem', cursor:'pointer', fontFamily:'Inter, sans-serif' }}>Cancel</button>
-                      </div>
+            {/* Tab content */}
+            <div style={{ overflowY:'auto', flex:1, padding:'18px 16px' }}>
+
+              {leftTab === 'calendar' && (
+                <div>
+                  {/* Calendar header */}
+                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'12px' }}>
+                    <h2 className="font-serif text-cream" style={{ fontSize:'1rem', fontWeight:600, margin:0 }}>Journal</h2>
+                    <div style={{ display:'flex', alignItems:'center', gap:'6px' }}>
+                      <button onClick={prevMonth} style={{ background:'rgba(245,239,230,0.07)', border:'none', color:'#f5efe6', borderRadius:'8px', padding:'4px 9px', cursor:'pointer', fontSize:'1rem', transition:'background 0.2s' }}>‹</button>
+                      <span className="font-serif text-cream" style={{ fontSize:'0.84rem', fontWeight:600, minWidth:'100px', textAlign:'center' }}>{MONTH_NAMES[calMonth]} {calYear}</span>
+                      <button onClick={nextMonth} style={{ background:'rgba(245,239,230,0.07)', border:'none', color:'#f5efe6', borderRadius:'8px', padding:'4px 9px', cursor:'pointer', fontSize:'1rem', transition:'background 0.2s' }}>›</button>
                     </div>
-                  ) : (
-                    <>
-                      {!hasContent ? (
-                        <p style={{ color:'rgba(245,239,230,0.22)', fontSize:'0.75rem', fontStyle:'italic', fontFamily:'Lora, serif', lineHeight:1.5 }}>No intention set yet.</p>
-                      ) : (
-                        <>
-                          {intention.sentence && <p className="font-serif" style={{ color:'rgba(245,239,230,0.72)', fontSize:'0.79rem', fontStyle:'italic', lineHeight:1.5, marginBottom: (intention.items.length>0||intention.focusWords.length>0)?'8px':'0' }}>"{intention.sentence}"</p>}
-                          {intention.items.length > 0 && (
-                            <div style={{ display:'flex', flexDirection:'column', gap:'5px', marginBottom:intention.focusWords.length>0?'8px':'0' }}>
-                              {intention.items.map((item,i) => (
-                                <div key={i} style={{ display:'flex', alignItems:'flex-start', gap:'6px' }}>
-                                  <div style={{ width:'13px', height:'13px', borderRadius:'50%', flexShrink:0, marginTop:'1px', border:item.checked?'none':'1.5px solid rgba(245,239,230,0.28)', background:item.checked?'#c4714f':'transparent', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                                    {item.checked && <span style={{ color:'#f5efe6', fontSize:'7px', lineHeight:1 }}>✓</span>}
-                                  </div>
-                                  <span style={{ color:item.checked?'rgba(245,239,230,0.28)':'rgba(245,239,230,0.65)', fontSize:'0.76rem', lineHeight:1.4, textDecoration:item.checked?'line-through':'none', fontFamily:'Inter, sans-serif' }}>{item.text}</span>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                          {intention.focusWords.length > 0 && (
-                            <div style={{ display:'flex', gap:'3px', flexWrap:'wrap' }}>
-                              {intention.focusWords.map(w => <span key={w} style={{ background:'rgba(196,113,79,0.2)', color:'#e8987a', borderRadius:'20px', padding:'2px 8px', fontSize:'0.66rem', fontFamily:'Inter, sans-serif' }}>{w}</span>)}
-                            </div>
-                          )}
-                        </>
-                      )}
-                      <button onClick={() => startReview('month', intKey, loadReviewForKey('month', intKey)?.answers)}
-                        style={{ width:'100%', background:'rgba(245,239,230,0.04)', border:'1px solid rgba(245,239,230,0.09)', borderRadius:'8px', color:'rgba(245,239,230,0.45)', fontSize:'0.71rem', cursor:'pointer', padding:'7px', marginTop:'10px', fontFamily:'Inter, sans-serif', transition:'all 0.2s' }}
-                        onMouseEnter={e=>{e.currentTarget.style.background='rgba(245,239,230,0.08)';e.currentTarget.style.color='rgba(245,239,230,0.75)';}}
-                        onMouseLeave={e=>{e.currentTarget.style.background='rgba(245,239,230,0.04)';e.currentTarget.style.color='rgba(245,239,230,0.45)';}}>
-                        Review {MONTH_NAMES[intNavMonth].slice(0,3)} →
-                      </button>
-                    </>
-                  )}
-                </div>
-              );
-            })()}
-
-            {/* Weekly intention cards for the selected month */}
-            {intWeeks.map(({ weekKey: wk, label }) => {
-              const intention = loadIntention(wk) || { sentence: '', items: [], focusWords: [] };
-              const hasContent = intention.sentence || intention.items.length > 0 || intention.focusWords.length > 0;
-              const isEditing = cardEditMode === wk;
-              return (
-                <div key={wk} style={{ background:'rgba(245,239,230,0.03)', border: isEditing ? '1px solid rgba(245,239,230,0.2)' : '1px solid rgba(245,239,230,0.07)', borderRadius:'13px', padding:'12px', marginBottom:'8px', transition:'border-color 0.2s' }}>
-                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'8px' }}>
-                    <span style={{ color:'rgba(245,239,230,0.38)', fontSize:'0.62rem', fontWeight:600, letterSpacing:'0.08em', textTransform:'uppercase', fontFamily:'Inter, sans-serif' }}>Week of {label}</span>
-                    {!isEditing && <button style={ghostEditBtn} onClick={() => { setCardEditForm({ sentence:intention.sentence||'', items:(intention.items||[]).map(it=>({...it})), focusWords:[...(intention.focusWords||[])] }); setCardEditItemInput(''); setCardEditMode(wk); }}>Edit</button>}
-                    {isEditing && <span style={{ color:'rgba(245,239,230,0.28)', fontSize:'0.6rem', fontFamily:'Inter, sans-serif' }}>editing</span>}
                   </div>
-                  {isEditing && cardEditForm ? (
-                    <div>
-                      <textarea value={cardEditForm.sentence} onChange={e=>setCardEditForm(f=>({...f,sentence:e.target.value}))} placeholder="What do you want this week to feel like?" rows={2} autoFocus
-                        style={{ width:'100%', boxSizing:'border-box', background:'rgba(245,239,230,0.06)', border:'1px solid rgba(245,239,230,0.14)', borderRadius:'7px', padding:'7px 9px', color:'#f5efe6', fontSize:'0.77rem', lineHeight:1.5, resize:'none', outline:'none', fontFamily:'Inter, sans-serif', marginBottom:'8px' }} />
-                      {cardEditForm.items.length > 0 && (
-                        <div style={{ display:'flex', flexDirection:'column', gap:'3px', marginBottom:'5px' }}>
-                          {cardEditForm.items.map((item,i) => (
-                            <div key={i} style={{ display:'flex', alignItems:'center', gap:'5px' }}>
-                              <span style={{ flex:1, color:'rgba(245,239,230,0.6)', fontSize:'0.74rem', fontFamily:'Inter, sans-serif' }}>{item.text}</span>
-                              <button onClick={() => setCardEditForm(f=>({...f,items:f.items.filter((_,j)=>j!==i)}))} style={{ background:'none', border:'none', color:'rgba(245,239,230,0.25)', cursor:'pointer', fontSize:'0.85rem', padding:'0 2px', lineHeight:1 }}>×</button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      <div style={{ display:'flex', gap:'4px', marginBottom:'8px' }}>
-                        <input value={cardEditItemInput} onChange={e=>setCardEditItemInput(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();const t=cardEditItemInput.trim();if(t){setCardEditForm(f=>({...f,items:[...f.items,{text:t,checked:false}]}));setCardEditItemInput('');}}} } placeholder="Add intention..." style={{ flex:1, background:'rgba(245,239,230,0.05)', border:'1px solid rgba(245,239,230,0.1)', borderRadius:'5px', padding:'4px 7px', color:'#f5efe6', fontSize:'0.73rem', outline:'none', fontFamily:'Inter, sans-serif' }} />
-                        <button onClick={() => { const t=cardEditItemInput.trim(); if(t){setCardEditForm(f=>({...f,items:[...f.items,{text:t,checked:false}]}));setCardEditItemInput('');} }} style={{ background:'rgba(245,239,230,0.07)', border:'none', borderRadius:'5px', color:'#f5efe6', width:'24px', cursor:'pointer', fontSize:'0.95rem', flexShrink:0 }}>+</button>
+                  {/* Day headers */}
+                  <div style={{ display:'grid', gridTemplateColumns:'repeat(7, 1fr)', gap:'3px', marginBottom:'3px' }}>
+                    {DAY_NAMES.map(d => (
+                      <div key={d} style={{ textAlign:'center', color:'rgba(245,239,230,0.28)', fontSize:'0.65rem', fontWeight:600, letterSpacing:'0.04em', padding:'3px 0' }}>{d}</div>
+                    ))}
+                  </div>
+                  {/* Calendar grid */}
+                  <div style={{ display:'grid', gridTemplateColumns:'repeat(7, 1fr)', gap:'3px', marginBottom:'12px' }}>
+                    {cells.map((day, idx) => {
+                      if (!day) return <div key={`empty-${idx}`} />;
+                      const ds       = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+                      const entry    = loadJournalEntry(ds);
+                      const hasEntry = entryDates.has(ds) || !!entry;
+                      const isToday  = ds === today;
+                      const isSel    = day === selectedDay;
+                      const tint     = entry && ENERGY_TINTS[entry.energyLevel];
+                      let bg, tc, sub;
+                      if (isToday)   { bg='rgba(58,38,26,0.75)'; tc='#f5efe6'; sub='today'; }
+                      else if (tint) { bg=tint.bg; tc=tint.text; sub=tint.label; }
+                      else           { bg='transparent'; tc=hasEntry?'rgba(245,239,230,0.55)':'rgba(245,239,230,0.2)'; sub=null; }
+                      const border  = isToday ? '1px solid rgba(212,168,83,0.4)' : isSel ? '1px solid rgba(212,168,83,0.55)' : tint ? `1px solid ${tint.text}30` : '1px solid transparent';
+                      const overlay = isSel ? 'rgba(212,168,83,0.12)' : null;
+                      return (
+                        <button key={day}
+                          onClick={()=>{ if(hasEntry||isToday){ setSelectedDay(day===selectedDay?null:day); setDeleteConfirm(false); setEditMode(false); setEditData(null); } }}
+                          style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'4px 2px', borderRadius:'9px', cursor:(hasEntry||isToday)?'pointer':'default', background:overlay?overlay:bg, border, transition:'all 0.15s', minHeight:'36px', outline:'none' }}
+                        >
+                          <span style={{ fontSize:'11px', fontWeight:isToday?700:400, color:tc, fontFamily:'Inter, sans-serif', lineHeight:1 }}>{day}</span>
+                          {sub && <span style={{ fontSize:'9px', color:tc, opacity:0.8, marginTop:'2px', fontFamily:'Inter, sans-serif', lineHeight:1 }}>{sub}</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {/* Legend */}
+                  <div style={{ display:'flex', alignItems:'center', gap:'6px', flexWrap:'wrap', paddingBottom:'12px', marginBottom:'14px', borderBottom:'0.5px solid rgba(245,239,230,0.08)' }}>
+                    <span style={{ color:'rgba(245,239,230,0.32)', fontSize:'0.65rem', fontFamily:'Inter, sans-serif' }}>Energy:</span>
+                    {(['good','neutral','tired','drained']).map(k => (
+                      <div key={k} style={{ display:'flex', alignItems:'center', gap:'3px' }}>
+                        <div style={{ width:'11px', height:'11px', borderRadius:'2px', background:ENERGY_TINTS[k].bg, border:`1px solid ${ENERGY_TINTS[k].text}45` }} />
+                        <span style={{ color:'rgba(245,239,230,0.42)', fontSize:'0.65rem', fontFamily:'Inter, sans-serif' }}>{ENERGY_TINTS[k].label}</span>
                       </div>
-                      <div style={{ display:'flex', gap:'3px', flexWrap:'wrap', marginBottom:'9px' }}>
-                        {WEEK_FOCUS_WORDS.map(w => <button key={w} onClick={() => setCardEditForm(f=>({...f,focusWords:f.focusWords.includes(w)?f.focusWords.filter(x=>x!==w):[...f.focusWords,w]}))} style={focusPill(cardEditForm.focusWords.includes(w))}>{w}</button>)}
-                      </div>
-                      <div style={{ display:'flex', gap:'5px' }}>
-                        <button onClick={() => { saveIntentionData(wk, cardEditForm); if(wk===weekKey){setWeekInt(cardEditForm);setWeekForm(cardEditForm);} setCardEditMode(null); setCardEditForm(null); setIntRefresh(r=>r+1); }}
-                          style={{ flex:1, background:'#c4714f', color:'#f5efe6', border:'none', borderRadius:'7px', padding:'7px', fontSize:'0.72rem', fontWeight:600, cursor:'pointer', fontFamily:'Inter, sans-serif' }}
-                          onMouseEnter={e=>e.currentTarget.style.background='#a35a3a'} onMouseLeave={e=>e.currentTarget.style.background='#c4714f'}>Save</button>
-                        <button onClick={() => { setCardEditMode(null); setCardEditForm(null); }} style={{ flex:1, background:'transparent', color:'rgba(245,239,230,0.45)', border:'1px solid rgba(245,239,230,0.12)', borderRadius:'7px', padding:'7px', fontSize:'0.72rem', cursor:'pointer', fontFamily:'Inter, sans-serif' }}>Cancel</button>
-                      </div>
+                    ))}
+                    <div style={{ display:'flex', gap:'5px', marginLeft:'auto' }}>
+                      <button onClick={exportJournal} style={{ background:'rgba(212,168,83,0.1)', color:'#d4a853', border:'1px solid rgba(212,168,83,0.2)', borderRadius:'7px', padding:'4px 9px', fontSize:'0.68rem', fontWeight:600, cursor:'pointer', fontFamily:'Inter, sans-serif' }}>Export</button>
+                      <button onClick={clearAllEntries} style={{ background:confirmClear?'rgba(232,152,122,0.12)':'rgba(245,239,230,0.04)', color:confirmClear?'#e8987a':'rgba(245,239,230,0.28)', border:confirmClear?'1px solid rgba(232,152,122,0.3)':'1px solid rgba(245,239,230,0.08)', borderRadius:'7px', padding:'4px 9px', fontSize:'0.68rem', cursor:'pointer', fontFamily:'Inter, sans-serif' }}>{confirmClear ? 'Confirm?' : 'Clear all'}</button>
                     </div>
-                  ) : (
-                    <>
-                      {!hasContent ? (
-                        <p style={{ color:'rgba(245,239,230,0.2)', fontSize:'0.73rem', fontStyle:'italic', fontFamily:'Lora, serif', lineHeight:1.5 }}>No intention set yet.</p>
-                      ) : (
-                        <>
-                          {intention.sentence && <p className="font-serif" style={{ color:'rgba(245,239,230,0.68)', fontSize:'0.77rem', fontStyle:'italic', lineHeight:1.5, marginBottom:(intention.items.length>0||intention.focusWords.length>0)?'7px':'0' }}>"{intention.sentence}"</p>}
-                          {intention.items.length > 0 && (
-                            <div style={{ display:'flex', flexDirection:'column', gap:'4px', marginBottom:intention.focusWords.length>0?'7px':'0' }}>
-                              {intention.items.map((item,i) => (
-                                <div key={i} style={{ display:'flex', alignItems:'flex-start', gap:'6px' }}>
-                                  <div style={{ width:'12px', height:'12px', borderRadius:'50%', flexShrink:0, marginTop:'2px', border:item.checked?'none':'1.5px solid rgba(245,239,230,0.25)', background:item.checked?'#c4714f':'transparent', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                                    {item.checked && <span style={{ color:'#f5efe6', fontSize:'7px', lineHeight:1 }}>✓</span>}
-                                  </div>
-                                  <span style={{ color:item.checked?'rgba(245,239,230,0.25)':'rgba(245,239,230,0.62)', fontSize:'0.74rem', lineHeight:1.4, textDecoration:item.checked?'line-through':'none', fontFamily:'Inter, sans-serif' }}>{item.text}</span>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                          {intention.focusWords.length > 0 && (
-                            <div style={{ display:'flex', gap:'3px', flexWrap:'wrap' }}>
-                              {intention.focusWords.map(w => <span key={w} style={{ background:'rgba(196,113,79,0.18)', color:'#e8987a', borderRadius:'20px', padding:'2px 7px', fontSize:'0.64rem', fontFamily:'Inter, sans-serif' }}>{w}</span>)}
-                            </div>
-                          )}
-                        </>
-                      )}
-                      <button onClick={() => startReview('week', wk, loadReviewForKey('week', wk)?.answers)}
-                        style={{ width:'100%', background:'rgba(245,239,230,0.04)', border:'1px solid rgba(245,239,230,0.08)', borderRadius:'8px', color:'rgba(245,239,230,0.4)', fontSize:'0.69rem', cursor:'pointer', padding:'6px', marginTop:'9px', fontFamily:'Inter, sans-serif', transition:'all 0.2s' }}
-                        onMouseEnter={e=>{e.currentTarget.style.background='rgba(245,239,230,0.08)';e.currentTarget.style.color='rgba(245,239,230,0.72)';}}
-                        onMouseLeave={e=>{e.currentTarget.style.background='rgba(245,239,230,0.04)';e.currentTarget.style.color='rgba(245,239,230,0.4)';}}>
-                        Review week →
-                      </button>
-                    </>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-
-          {/* ── Center column ── */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: '18px 22px' }}>
-
-            {/* Today's entry card */}
-            <div style={{ marginBottom: '20px' }}>
-              {todayEntry ? (
-                <div className="fade-in" style={{ background: 'rgba(196,113,79,0.07)', border: '1px solid rgba(196,113,79,0.25)', borderRadius: '16px', padding: '16px 18px' }}>
-                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'12px', gap:'10px' }}>
-                    <span className="font-serif" style={{ color:'#d4a853', fontSize:'0.9rem', fontWeight:600 }}>Tonight</span>
-                    {todayEditMode ? (
-                      <span style={{ color:'rgba(245,239,230,0.3)', fontSize:'0.72rem', fontFamily:'Inter, sans-serif', flexShrink:0 }}>editing</span>
-                    ) : todayDeleteConfirm ? (
-                      <div style={{ display:'flex', gap:'8px', alignItems:'center', flexShrink:0 }}>
-                        <span style={{ color:'rgba(245,239,230,0.45)', fontSize:'0.74rem', fontFamily:'Inter, sans-serif' }}>Delete?</span>
-                        <button onClick={handleDeleteTodayEntry} style={{ background:'none', border:'none', color:'#e8987a', fontSize:'0.74rem', cursor:'pointer', fontFamily:'Inter, sans-serif' }}>Confirm</button>
-                        <button onClick={() => setTodayDeleteConfirm(false)} style={{ background:'none', border:'none', color:'rgba(245,239,230,0.35)', fontSize:'0.74rem', cursor:'pointer', fontFamily:'Inter, sans-serif' }}>Cancel</button>
-                      </div>
-                    ) : (
-                      <div style={{ display:'flex', gap:'10px', alignItems:'center', flexShrink:0 }}>
-                        <button onClick={enterTodayEditMode} style={{ background:'none', border:'none', color:'rgba(245,239,230,0.32)', fontSize:'0.73rem', cursor:'pointer', fontFamily:'Inter, sans-serif', transition:'color 0.2s' }}
-                          onMouseEnter={e=>e.currentTarget.style.color='rgba(245,239,230,0.7)'} onMouseLeave={e=>e.currentTarget.style.color='rgba(245,239,230,0.32)'}>Edit</button>
-                        <button onClick={() => setTodayDeleteConfirm(true)} style={{ background:'none', border:'none', color:'rgba(245,239,230,0.22)', fontSize:'0.73rem', cursor:'pointer', fontFamily:'Inter, sans-serif', transition:'color 0.2s' }}
-                          onMouseEnter={e=>e.currentTarget.style.color='#e8987a'} onMouseLeave={e=>e.currentTarget.style.color='rgba(245,239,230,0.22)'}>Delete</button>
-                      </div>
-                    )}
                   </div>
-
-                  {todayEditMode && todayEditData ? (
-                    <div>
-                      <p style={{ color:'rgba(245,239,230,0.42)', fontSize:'0.7rem', fontFamily:'Inter, sans-serif', marginBottom:'6px', textTransform:'uppercase', letterSpacing:'0.06em' }}>Body</p>
-                      <div style={{ display:'flex', flexDirection:'column', gap:'5px', marginBottom:'12px' }}>
-                        {[{value:'drained',emoji:'🪫',label:'Completely drained'},{value:'tired',emoji:'😴',label:'Tired but okay'},{value:'neutral',emoji:'😐',label:'Neutral'},{value:'good',emoji:'✨',label:'Surprisingly good'}].map(opt => (
-                          <button key={opt.value} onClick={() => setTodayEditData(d=>({...d,energyLevel:opt.value}))}
-                            style={{ display:'flex', alignItems:'center', gap:'9px', background:todayEditData.energyLevel===opt.value?'rgba(196,113,79,0.18)':'rgba(245,239,230,0.04)', border:todayEditData.energyLevel===opt.value?'1px solid rgba(196,113,79,0.5)':'1px solid rgba(245,239,230,0.1)', borderRadius:'9px', padding:'7px 11px', cursor:'pointer', textAlign:'left', transition:'all 0.15s' }}>
-                            <span style={{ fontSize:'0.9rem' }}>{opt.emoji}</span>
-                            <span style={{ color:todayEditData.energyLevel===opt.value?'#f5efe6':'rgba(245,239,230,0.55)', fontSize:'0.8rem', fontFamily:'Inter, sans-serif' }}>{opt.label}</span>
-                          </button>
-                        ))}
-                      </div>
-                      <p style={{ color:'rgba(245,239,230,0.42)', fontSize:'0.7rem', fontFamily:'Inter, sans-serif', marginBottom:'6px', textTransform:'uppercase', letterSpacing:'0.06em' }}>Head</p>
-                      <div style={{ display:'flex', flexDirection:'column', gap:'5px', marginBottom:'14px' }}>
-                        {[{value:'overstimulated',emoji:'🌀',label:'Overstimulated'},{value:'foggy',emoji:'🌫️',label:'Foggy and kind of blank'},{value:'clear',emoji:'🙂',label:'Clear enough'}].map(opt => (
-                          <button key={opt.value} onClick={() => setTodayEditData(d=>({...d,mentalState:opt.value}))}
-                            style={{ display:'flex', alignItems:'center', gap:'9px', background:todayEditData.mentalState===opt.value?'rgba(196,113,79,0.18)':'rgba(245,239,230,0.04)', border:todayEditData.mentalState===opt.value?'1px solid rgba(196,113,79,0.5)':'1px solid rgba(245,239,230,0.1)', borderRadius:'9px', padding:'7px 11px', cursor:'pointer', textAlign:'left', transition:'all 0.15s' }}>
-                            <span style={{ fontSize:'0.9rem' }}>{opt.emoji}</span>
-                            <span style={{ color:todayEditData.mentalState===opt.value?'#f5efe6':'rgba(245,239,230,0.55)', fontSize:'0.8rem', fontFamily:'Inter, sans-serif' }}>{opt.label}</span>
-                          </button>
-                        ))}
-                      </div>
-                      <div style={{ borderTop:'0.5px solid rgba(245,239,230,0.08)', marginBottom:'12px' }} />
-                      <div style={{ display:'flex', flexDirection:'column', gap:'12px', marginBottom:'14px' }}>
-                        {todayEditData.prompts.map((p,i) => (
-                          <div key={i}>
-                            <p className="font-serif" style={{ color:'rgba(245,239,230,0.45)', fontSize:'0.82rem', fontStyle:'italic', marginBottom:'5px' }}>{p.question}</p>
-                            <textarea value={p.answer} onChange={e => setTodayEditData(d=>({...d,prompts:d.prompts.map((pr,j)=>j===i?{...pr,answer:e.target.value}:pr)}))}
-                              style={{ width:'100%', boxSizing:'border-box', background:'rgba(245,239,230,0.05)', border:'1px solid rgba(245,239,230,0.1)', borderRadius:'9px', padding:'10px', color:'#f5efe6', fontSize:'0.84rem', lineHeight:1.6, resize:'vertical', outline:'none', minHeight:'70px', fontFamily:'Inter, sans-serif' }} />
+                  {/* Entry viewer */}
+                  {selectedDay && selectedEntry ? (
+                    <div className="fade-in" style={{ background:'rgba(245,239,230,0.05)', border:'1px solid rgba(245,239,230,0.1)', borderRadius:'16px', padding:'16px', marginBottom:'20px' }}>
+                      <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:'12px', gap:'10px' }}>
+                        <p className="font-serif" style={{ color:'#d4a853', fontSize:'0.95rem', fontWeight:600 }}>{formatDateNice(selectedDateStr)}</p>
+                        {editMode ? (
+                          <span style={{ color:'rgba(245,239,230,0.3)', fontSize:'0.72rem', fontFamily:'Inter, sans-serif', flexShrink:0 }}>editing</span>
+                        ) : deleteConfirm ? (
+                          <div style={{ display:'flex', gap:'7px', alignItems:'center', flexShrink:0 }}>
+                            <button onClick={handleDeleteEntry} style={{ background:'none', border:'none', color:'#e8987a', fontSize:'0.74rem', cursor:'pointer', fontFamily:'Inter, sans-serif' }}>Delete</button>
+                            <button onClick={()=>setDeleteConfirm(false)} style={{ background:'none', border:'none', color:'rgba(245,239,230,0.35)', fontSize:'0.74rem', cursor:'pointer', fontFamily:'Inter, sans-serif' }}>Cancel</button>
                           </div>
-                        ))}
+                        ) : (
+                          <div style={{ display:'flex', gap:'10px', alignItems:'center', flexShrink:0 }}>
+                            <button onClick={enterEditMode} style={{ background:'none', border:'none', color:'rgba(245,239,230,0.35)', fontSize:'0.74rem', cursor:'pointer', fontFamily:'Inter, sans-serif' }}>Edit</button>
+                            <button onClick={()=>setDeleteConfirm(true)} style={{ background:'none', border:'none', color:'rgba(245,239,230,0.25)', fontSize:'0.74rem', cursor:'pointer', fontFamily:'Inter, sans-serif' }}>Delete</button>
+                          </div>
+                        )}
                       </div>
-                      <div style={{ marginBottom:'14px' }}>
-                        <p style={{ color:'rgba(245,239,230,0.42)', fontSize:'0.7rem', fontFamily:'Inter, sans-serif', marginBottom:'5px', textTransform:'uppercase', letterSpacing:'0.06em' }}>Notes</p>
-                        <textarea value={todayEditData.notes||''} onChange={e=>setTodayEditData(d=>({...d,notes:e.target.value}))} placeholder="A thought, a moment, anything..."
-                          style={{ width:'100%', boxSizing:'border-box', background:'rgba(245,239,230,0.05)', border:'1px solid rgba(245,239,230,0.1)', borderRadius:'9px', padding:'10px', color:'#f5efe6', fontSize:'0.84rem', lineHeight:1.6, resize:'vertical', outline:'none', minHeight:'60px', fontFamily:'Inter, sans-serif' }} />
-                      </div>
-                      <div style={{ display:'flex', gap:'8px' }}>
-                        <button onClick={handleSaveTodayEdit} style={{ flex:1, background:'#c4714f', color:'#f5efe6', border:'none', borderRadius:'10px', padding:'10px', fontSize:'0.84rem', fontWeight:600, cursor:'pointer', fontFamily:'Inter, sans-serif', transition:'background 0.2s' }}
-                          onMouseEnter={e=>e.currentTarget.style.background='#a35a3a'} onMouseLeave={e=>e.currentTarget.style.background='#c4714f'}>Save changes</button>
-                        <button onClick={() => { setTodayEditMode(false); setTodayEditData(null); }} style={{ flex:1, background:'transparent', color:'rgba(245,239,230,0.5)', border:'1px solid rgba(245,239,230,0.15)', borderRadius:'10px', padding:'10px', fontSize:'0.84rem', cursor:'pointer', fontFamily:'Inter, sans-serif', transition:'all 0.2s' }}
-                          onMouseEnter={e=>{e.currentTarget.style.borderColor='rgba(245,239,230,0.3)';e.currentTarget.style.color='rgba(245,239,230,0.8)';}} onMouseLeave={e=>{e.currentTarget.style.borderColor='rgba(245,239,230,0.15)';e.currentTarget.style.color='rgba(245,239,230,0.5)';}}>Cancel</button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div>
-                      {(todayEntry.energyLevel || todayEntry.mentalState) && (
-                        <div style={{ display:'flex', gap:'6px', flexWrap:'wrap', marginBottom:'12px' }}>
-                          {todayEntry.energyLevel && (() => { const t=ENERGY_TINTS[todayEntry.energyLevel]; return <span style={{ background:t?t.bg:'rgba(245,239,230,0.07)', color:t?t.text:'rgba(245,239,230,0.65)', borderRadius:'20px', padding:'3px 10px', fontSize:'0.76rem', fontFamily:'Inter, sans-serif', border:t?`1px solid ${t.text}30`:'none' }}>{energyEmoji[todayEntry.energyLevel]} {energyLabel[todayEntry.energyLevel]}</span>; })()}
-                          {todayEntry.mentalState && <span style={{ background:'rgba(245,239,230,0.07)', borderRadius:'20px', padding:'3px 10px', fontSize:'0.76rem', color:'rgba(245,239,230,0.6)', fontFamily:'Inter, sans-serif' }}>{mentalEmoji[todayEntry.mentalState]} {mentalLabel[todayEntry.mentalState]}</span>}
-                          {todayEntry.emotionTone && <span style={{ background:'rgba(245,239,230,0.07)', borderRadius:'20px', padding:'3px 10px', fontSize:'0.76rem', color:'rgba(245,239,230,0.6)', fontFamily:'Inter, sans-serif' }}>{emotionEmoji[todayEntry.emotionTone]} {emotionLabel[todayEntry.emotionTone]}</span>}
-                          {todayEntry.stressIntensity && <span style={{ background:'rgba(245,239,230,0.07)', borderRadius:'20px', padding:'3px 10px', fontSize:'0.76rem', color:'rgba(245,239,230,0.6)', fontFamily:'Inter, sans-serif' }}>{stressEmoji[todayEntry.stressIntensity]} {stressLabel[todayEntry.stressIntensity]}</span>}
+                      {editMode && editData ? (
+                        <div>
+                          <div style={{ display:'flex', flexDirection:'column', gap:'5px', marginBottom:'12px' }}>
+                            {[{value:'drained',emoji:'🪫',label:'Completely drained'},{value:'tired',emoji:'😴',label:'Tired but okay'},{value:'neutral',emoji:'😐',label:'Neutral'},{value:'good',emoji:'✨',label:'Surprisingly good'}].map(opt => (
+                              <button key={opt.value} onClick={()=>setEditData(d=>({...d,energyLevel:opt.value}))}
+                                style={{ display:'flex', alignItems:'center', gap:'9px', background:editData.energyLevel===opt.value?'rgba(196,113,79,0.18)':'rgba(245,239,230,0.04)', border:editData.energyLevel===opt.value?'1px solid rgba(196,113,79,0.5)':'1px solid rgba(245,239,230,0.1)', borderRadius:'9px', padding:'7px 11px', cursor:'pointer', textAlign:'left', transition:'all 0.15s' }}>
+                                <span>{opt.emoji}</span><span style={{ color:editData.energyLevel===opt.value?'#f5efe6':'rgba(245,239,230,0.55)', fontSize:'0.82rem', fontFamily:'Inter, sans-serif' }}>{opt.label}</span>
+                              </button>
+                            ))}
+                          </div>
+                          <div style={{ display:'flex', flexDirection:'column', gap:'5px', marginBottom:'14px' }}>
+                            {[{value:'overstimulated',emoji:'🌀',label:'Overstimulated'},{value:'foggy',emoji:'🌫️',label:'Foggy and kind of blank'},{value:'clear',emoji:'🙂',label:'Clear enough'}].map(opt => (
+                              <button key={opt.value} onClick={()=>setEditData(d=>({...d,mentalState:opt.value}))}
+                                style={{ display:'flex', alignItems:'center', gap:'9px', background:editData.mentalState===opt.value?'rgba(196,113,79,0.18)':'rgba(245,239,230,0.04)', border:editData.mentalState===opt.value?'1px solid rgba(196,113,79,0.5)':'1px solid rgba(245,239,230,0.1)', borderRadius:'9px', padding:'7px 11px', cursor:'pointer', textAlign:'left', transition:'all 0.15s' }}>
+                                <span>{opt.emoji}</span><span style={{ color:editData.mentalState===opt.value?'#f5efe6':'rgba(245,239,230,0.55)', fontSize:'0.82rem', fontFamily:'Inter, sans-serif' }}>{opt.label}</span>
+                              </button>
+                            ))}
+                          </div>
+                          <div style={{ display:'flex', flexDirection:'column', gap:'10px', marginBottom:'14px' }}>
+                            {editData.prompts.map((p,i) => (
+                              <div key={i}>
+                                <p className="font-serif" style={{ color:'rgba(245,239,230,0.45)', fontSize:'0.82rem', fontStyle:'italic', marginBottom:'5px' }}>{p.question}</p>
+                                <textarea value={p.answer} onChange={e=>setEditData(d=>({...d,prompts:d.prompts.map((pr,j)=>j===i?{...pr,answer:e.target.value}:pr)}))}
+                                  style={{ width:'100%', boxSizing:'border-box', background:'rgba(245,239,230,0.06)', border:'1px solid rgba(245,239,230,0.12)', borderRadius:'9px', padding:'10px', color:'#f5efe6', fontSize:'0.84rem', lineHeight:1.6, resize:'vertical', outline:'none', minHeight:'70px', fontFamily:'Inter, sans-serif' }} />
+                              </div>
+                            ))}
+                          </div>
+                          <textarea value={editData.notes||''} onChange={e=>setEditData(d=>({...d,notes:e.target.value}))} placeholder="Notes..."
+                            style={{ width:'100%', boxSizing:'border-box', background:'rgba(245,239,230,0.06)', border:'1px solid rgba(245,239,230,0.12)', borderRadius:'9px', padding:'10px', color:'#f5efe6', fontSize:'0.84rem', lineHeight:1.6, resize:'vertical', outline:'none', minHeight:'60px', fontFamily:'Inter, sans-serif', marginBottom:'12px' }} />
+                          <div style={{ display:'flex', gap:'8px' }}>
+                            <button onClick={handleSaveEdit} style={{ flex:1, background:'#c4714f', color:'#f5efe6', border:'none', borderRadius:'10px', padding:'10px', fontSize:'0.84rem', fontWeight:600, cursor:'pointer', fontFamily:'Inter, sans-serif' }}>Save</button>
+                            <button onClick={()=>{setEditMode(false);setEditData(null);}} style={{ flex:1, background:'transparent', color:'rgba(245,239,230,0.5)', border:'1px solid rgba(245,239,230,0.15)', borderRadius:'10px', padding:'10px', fontSize:'0.84rem', cursor:'pointer', fontFamily:'Inter, sans-serif' }}>Cancel</button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div>
+                          {(selectedEntry.energyLevel || selectedEntry.mentalState) && (
+                            <div style={{ display:'flex', gap:'5px', flexWrap:'wrap', marginBottom:'12px' }}>
+                              {selectedEntry.energyLevel && (() => { const t=ENERGY_TINTS[selectedEntry.energyLevel]; return <span style={{ background:t?t.bg:'rgba(245,239,230,0.07)', color:t?t.text:'rgba(245,239,230,0.65)', borderRadius:'20px', padding:'3px 9px', fontSize:'0.75rem', fontFamily:'Inter, sans-serif' }}>{energyEmoji[selectedEntry.energyLevel]} {energyLabel[selectedEntry.energyLevel]}</span>; })()}
+                              {selectedEntry.mentalState && <span style={{ background:'rgba(245,239,230,0.07)', borderRadius:'20px', padding:'3px 9px', fontSize:'0.75rem', color:'rgba(245,239,230,0.6)', fontFamily:'Inter, sans-serif' }}>{mentalEmoji[selectedEntry.mentalState]} {mentalLabel[selectedEntry.mentalState]}</span>}
+                            </div>
+                          )}
+                          <div style={{ borderTop:'0.5px solid rgba(245,239,230,0.08)', marginBottom:'12px' }} />
+                          <div style={{ display:'flex', flexDirection:'column', gap:'12px' }}>
+                            {selectedEntry.prompts && selectedEntry.prompts.map((p,i) => (
+                              <div key={i}>
+                                <p className="font-serif" style={{ color:'rgba(245,239,230,0.45)', fontSize:'0.82rem', fontStyle:'italic', marginBottom:'3px' }}>{p.question}</p>
+                                <p style={{ color:'#f5efe6', fontSize:'0.86rem', lineHeight:1.6, fontFamily:'Inter, sans-serif', whiteSpace:'pre-wrap' }}>{p.answer || <em style={{ opacity:0.35 }}>No answer</em>}</p>
+                              </div>
+                            ))}
+                          </div>
+                          {selectedEntry.notes && (
+                            <><div style={{ borderTop:'0.5px solid rgba(245,239,230,0.08)', margin:'12px 0 8px' }} />
+                            <p style={{ color:'rgba(245,239,230,0.62)', fontSize:'0.84rem', lineHeight:1.6, fontFamily:'Inter, sans-serif', whiteSpace:'pre-wrap' }}>{selectedEntry.notes}</p></>
+                          )}
                         </div>
                       )}
-                      <div style={{ borderTop:'0.5px solid rgba(245,239,230,0.08)', marginBottom:'12px' }} />
-                      <div style={{ display:'flex', flexDirection:'column', gap:'12px' }}>
-                        {todayEntry.prompts && todayEntry.prompts.map((p,i) => (
-                          <div key={i}>
-                            <p className="font-serif" style={{ color:'rgba(245,239,230,0.45)', fontSize:'0.82rem', fontStyle:'italic', marginBottom:'3px' }}>{p.question}</p>
-                            <p style={{ color:'#f5efe6', fontSize:'0.86rem', lineHeight:1.6, fontFamily:'Inter, sans-serif', whiteSpace:'pre-wrap' }}>{p.answer || <em style={{ opacity:0.35 }}>No answer written</em>}</p>
-                          </div>
-                        ))}
-                      </div>
-                      {todayEntry.notes && (
-                        <>
-                          <div style={{ borderTop:'0.5px solid rgba(245,239,230,0.08)', margin:'12px 0 8px' }} />
-                          <p style={{ color:'rgba(245,239,230,0.32)', fontSize:'0.67rem', fontWeight:600, letterSpacing:'0.08em', textTransform:'uppercase', fontFamily:'Inter, sans-serif', marginBottom:'4px' }}>Notes</p>
-                          <p style={{ color:'rgba(245,239,230,0.62)', fontSize:'0.84rem', lineHeight:1.6, fontFamily:'Inter, sans-serif', whiteSpace:'pre-wrap' }}>{todayEntry.notes}</p>
-                        </>
-                      )}
+                    </div>
+                  ) : (
+                    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', padding:'24px 0', opacity:0.28 }}>
+                      <div style={{ fontSize:'1.3rem', marginBottom:'6px' }}>🌙</div>
+                      <p style={{ color:'#f5efe6', fontFamily:'Inter, sans-serif', fontSize:'0.8rem' }}>Select a day to read that entry.</p>
                     </div>
                   )}
                 </div>
-              ) : (
-                <div style={{ background:'rgba(245,239,230,0.03)', border:'1px dashed rgba(245,239,230,0.12)', borderRadius:'16px', padding:'18px 18px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'12px' }}>
-                  <p className="font-serif" style={{ color:'rgba(245,239,230,0.4)', fontSize:'0.88rem', fontStyle:'italic' }}>How are you arriving tonight?</p>
-                  <button onClick={onWrite} style={{ background:'#c4714f', color:'#f5efe6', border:'none', borderRadius:'10px', padding:'8px 14px', fontSize:'0.78rem', fontWeight:600, cursor:'pointer', fontFamily:'Inter, sans-serif', whiteSpace:'nowrap', flexShrink:0, transition:'background 0.2s' }}
-                    onMouseEnter={e=>e.currentTarget.style.background='#a35a3a'} onMouseLeave={e=>e.currentTarget.style.background='#c4714f'}>✏️ Write tonight's entry</button>
+              )}
+
+              {leftTab === 'intentions' && (
+                <div>
+                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'16px' }}>
+                    <span className="font-serif text-cream" style={{ fontSize:'1rem', fontWeight:600 }}>Intentions</span>
+                    <NavArrows onPrev={prevIntMonth} onNext={nextIntMonth} label={`${MONTH_NAMES[intNavMonth].slice(0,3)} ${intNavYear}`} />
+                  </div>
+
+                  <IntentionCard
+                    key={`${intMonthKey}-${intRefresh}`}
+                    intentionKey={intMonthKey}
+                    isMonth={true}
+                    label={`${MONTH_NAMES[intNavMonth]} intention`}
+                    onStartReview={() => startReview('month', intMonthKey, loadReviewForKey('month', intMonthKey)?.answers)}
+                  />
+
+                  {intWeeks.map(({ weekKey: wk, label }) => (
+                    <IntentionCard
+                      key={`${wk}-${intRefresh}`}
+                      intentionKey={wk}
+                      isMonth={false}
+                      label={`Week of ${label}`}
+                      onStartReview={() => startReview('week', wk, loadReviewForKey('week', wk)?.answers)}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {leftTab === 'reviews' && (
+                <div>
+                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'16px' }}>
+                    <span className="font-serif text-cream" style={{ fontSize:'1rem', fontWeight:600 }}>Reviews</span>
+                    <NavArrows onPrev={prevRevMonth} onNext={nextRevMonth} label={`${MONTH_NAMES[revNavMonth].slice(0,3)} ${revNavYear}`} />
+                  </div>
+
+                  {/* Month review card */}
+                  {(() => {
+                    const intKey = revMonthKey;
+                    const review = loadReviewForKey('month', intKey);
+                    const hasDone = !!review;
+                    const intention = loadIntention(intKey);
+                    const hasIntention = !!(intention && (intention.sentence || intention.items?.length > 0 || intention.focusWords?.length > 0));
+                    const badge = hasDone ? { label:'Done', bg:'#D6ECD2', color:'#2E6B27' } : hasIntention ? { label:'Pending', bg:'#FAE8D0', color:'#854F0B' } : { label:'Not yet', bg:'rgba(245,239,230,0.06)', color:'rgba(245,239,230,0.35)' };
+                    return (
+                      <div key={`${revMonthKey}-${intRefresh}`} style={{ background:'rgba(196,113,79,0.07)', border:'1px solid rgba(196,113,79,0.16)', borderRadius:'13px', padding:'12px', marginBottom:'8px' }}>
+                        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'8px' }}>
+                          <span style={{ color:'rgba(245,239,230,0.42)', fontSize:'0.63rem', fontWeight:700, letterSpacing:'0.09em', textTransform:'uppercase', fontFamily:'Inter, sans-serif' }}>{MONTH_NAMES[revNavMonth]}</span>
+                          <span style={{ background:badge.bg, color:badge.color, borderRadius:'20px', padding:'2px 8px', fontSize:'0.62rem', fontFamily:'Inter, sans-serif', fontWeight:600 }}>{badge.label}</span>
+                        </div>
+                        {hasDone && review.answers && (() => {
+                          const lastQ = review.answers[Object.keys(review.answers).length - 1];
+                          const word = lastQ?.text;
+                          return word ? <p className="font-serif" style={{ color:'rgba(245,239,230,0.55)', fontSize:'0.8rem', fontStyle:'italic', marginBottom:'8px' }}>"{word}"</p> : null;
+                        })()}
+                        <button onClick={() => startReview('month', intKey, review?.answers)}
+                          style={{ width:'100%', background:'rgba(245,239,230,0.04)', border:'1px solid rgba(245,239,230,0.09)', borderRadius:'8px', color:'rgba(245,239,230,0.45)', fontSize:'0.69rem', cursor:'pointer', padding:'7px', fontFamily:'Inter, sans-serif', transition:'all 0.2s' }}
+                          onMouseEnter={e=>{e.currentTarget.style.background='rgba(245,239,230,0.08)';e.currentTarget.style.color='rgba(245,239,230,0.75)';}}
+                          onMouseLeave={e=>{e.currentTarget.style.background='rgba(245,239,230,0.04)';e.currentTarget.style.color='rgba(245,239,230,0.45)';}}
+                        >{hasDone ? 'Edit review →' : 'Start review →'}</button>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Weekly review cards */}
+                  {revWeeks.map(({ weekKey: wk, label }) => {
+                    const review = loadReviewForKey('week', wk);
+                    const hasDone = !!review;
+                    const intention = loadIntention(wk);
+                    const hasIntention = !!(intention && (intention.sentence || intention.items?.length > 0 || intention.focusWords?.length > 0));
+                    const badge = hasDone ? { label:'Done', bg:'#D6ECD2', color:'#2E6B27' } : hasIntention ? { label:'Pending', bg:'#FAE8D0', color:'#854F0B' } : { label:'Not yet', bg:'rgba(245,239,230,0.06)', color:'rgba(245,239,230,0.35)' };
+                    return (
+                      <div key={`${wk}-${intRefresh}`} style={{ background:'rgba(245,239,230,0.03)', border:'1px solid rgba(245,239,230,0.07)', borderRadius:'13px', padding:'12px', marginBottom:'8px' }}>
+                        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'8px' }}>
+                          <span style={{ color:'rgba(245,239,230,0.38)', fontSize:'0.62rem', fontWeight:600, letterSpacing:'0.08em', textTransform:'uppercase', fontFamily:'Inter, sans-serif' }}>Wk of {label}</span>
+                          <span style={{ background:badge.bg, color:badge.color, borderRadius:'20px', padding:'2px 8px', fontSize:'0.62rem', fontFamily:'Inter, sans-serif', fontWeight:600 }}>{badge.label}</span>
+                        </div>
+                        {hasDone && review.answers && (() => {
+                          const lastQ = review.answers[Object.keys(review.answers).length - 1];
+                          const word = lastQ?.text;
+                          return word ? <p className="font-serif" style={{ color:'rgba(245,239,230,0.52)', fontSize:'0.77rem', fontStyle:'italic', marginBottom:'7px' }}>"{word}"</p> : null;
+                        })()}
+                        <button onClick={() => startReview('week', wk, review?.answers)}
+                          style={{ width:'100%', background:'rgba(245,239,230,0.04)', border:'1px solid rgba(245,239,230,0.08)', borderRadius:'8px', color:'rgba(245,239,230,0.4)', fontSize:'0.67rem', cursor:'pointer', padding:'6px', fontFamily:'Inter, sans-serif', transition:'all 0.2s' }}
+                          onMouseEnter={e=>{e.currentTarget.style.background='rgba(245,239,230,0.08)';e.currentTarget.style.color='rgba(245,239,230,0.72)';}}
+                          onMouseLeave={e=>{e.currentTarget.style.background='rgba(245,239,230,0.04)';e.currentTarget.style.color='rgba(245,239,230,0.4)';}}
+                        >{hasDone ? 'Edit review →' : 'Start review →'}</button>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
+          </div>
+
+          {/* ── Right panel: calendar + entry viewer ── */}
+          <div className="journal-desktop-right" style={{ flex:1, overflowY:'auto', padding:'18px 22px' }}>
 
             {/* Calendar header */}
-            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'12px', gap:'8px' }}>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'12px' }}>
               <h2 className="font-serif text-cream" style={{ fontSize:'1.1rem', fontWeight:600, margin:0 }}>Journal</h2>
               <div style={{ display:'flex', alignItems:'center', gap:'6px' }}>
                 <button onClick={prevMonth} style={{ background:'rgba(245,239,230,0.07)', border:'none', color:'#f5efe6', borderRadius:'8px', padding:'5px 10px', cursor:'pointer', fontSize:'1rem', transition:'background 0.2s' }}
-                  onMouseEnter={e=>e.currentTarget.style.background='rgba(245,239,230,0.13)'} onMouseLeave={e=>e.currentTarget.style.background='rgba(245,239,230,0.07)'}>‹</button>
+                  onMouseEnter={e=>e.currentTarget.style.background='rgba(245,239,230,0.13)'} onMouseLeave={e=>e.currentTarget.style.background='rgba(245,239,230,0.07)'}
+                >‹</button>
                 <span className="font-serif text-cream" style={{ fontSize:'0.88rem', fontWeight:600, minWidth:'108px', textAlign:'center' }}>{MONTH_NAMES[calMonth]} {calYear}</span>
                 <button onClick={nextMonth} style={{ background:'rgba(245,239,230,0.07)', border:'none', color:'#f5efe6', borderRadius:'8px', padding:'5px 10px', cursor:'pointer', fontSize:'1rem', transition:'background 0.2s' }}
-                  onMouseEnter={e=>e.currentTarget.style.background='rgba(245,239,230,0.13)'} onMouseLeave={e=>e.currentTarget.style.background='rgba(245,239,230,0.07)'}>›</button>
+                  onMouseEnter={e=>e.currentTarget.style.background='rgba(245,239,230,0.13)'} onMouseLeave={e=>e.currentTarget.style.background='rgba(245,239,230,0.07)'}
+                >›</button>
               </div>
             </div>
 
             {/* Day headers */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '3px', marginBottom: '3px' }}>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(7, 1fr)', gap:'3px', marginBottom:'3px' }}>
               {DAY_NAMES.map(d => (
-                <div key={d} style={{ textAlign: 'center', color: 'rgba(245,239,230,0.28)', fontSize: '0.68rem', fontWeight: 600, letterSpacing: '0.04em', padding: '4px 0' }}>{d}</div>
+                <div key={d} style={{ textAlign:'center', color:'rgba(245,239,230,0.28)', fontSize:'0.68rem', fontWeight:600, letterSpacing:'0.04em', padding:'4px 0' }}>{d}</div>
               ))}
             </div>
 
-            {/* Calendar grid — existing logic, new cell visuals */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '3px', marginBottom: '14px' }}>
+            {/* Calendar grid */}
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(7, 1fr)', gap:'3px', marginBottom:'14px' }}>
               {cells.map((day, idx) => {
                 if (!day) return <div key={`empty-${idx}`} />;
                 const ds       = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
@@ -2964,42 +2985,42 @@
                 else if (tint)     { bg=tint.bg; tc=tint.text; sub=tint.label; }
                 else               { bg='transparent'; tc=hasEntry?'rgba(245,239,230,0.55)':'rgba(245,239,230,0.2)'; sub=null; }
 
-                const border = isToday ? '1px solid rgba(212,168,83,0.4)' : isSel ? '1px solid rgba(212,168,83,0.55)' : tint ? `1px solid ${tint.text}30` : '1px solid transparent';
+                const border  = isToday ? '1px solid rgba(212,168,83,0.4)' : isSel ? '1px solid rgba(212,168,83,0.55)' : tint ? `1px solid ${tint.text}30` : '1px solid transparent';
                 const overlay = isSel ? 'rgba(212,168,83,0.12)' : null;
 
                 return (
                   <button key={day}
-                    onClick={() => { if (hasEntry || isToday) { setSelectedDay(day === selectedDay ? null : day); setDeleteConfirm(false); setEditMode(false); setEditData(null); } }}
-                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '4px 2px', borderRadius: '9px', cursor: (hasEntry || isToday) ? 'pointer' : 'default', background: overlay ? overlay : bg, border, transition: 'all 0.15s', minHeight: '36px', outline: 'none' }}
+                    onClick={()=>{ if(hasEntry||isToday){ setSelectedDay(day===selectedDay?null:day); setDeleteConfirm(false); setEditMode(false); setEditData(null); } }}
+                    style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'4px 2px', borderRadius:'9px', cursor:(hasEntry||isToday)?'pointer':'default', background:overlay?overlay:bg, border, transition:'all 0.15s', minHeight:'36px', outline:'none' }}
                   >
-                    <span style={{ fontSize: '11px', fontWeight: isToday ? 700 : 400, color: tc, fontFamily: 'Inter, sans-serif', lineHeight: 1 }}>{day}</span>
-                    {sub && <span style={{ fontSize: '9px', color: tc, opacity: 0.8, marginTop: '2px', fontFamily: 'Inter, sans-serif', lineHeight: 1 }}>{sub}</span>}
+                    <span style={{ fontSize:'11px', fontWeight:isToday?700:400, color:tc, fontFamily:'Inter, sans-serif', lineHeight:1 }}>{day}</span>
+                    {sub && <span style={{ fontSize:'9px', color:tc, opacity:0.8, marginTop:'2px', fontFamily:'Inter, sans-serif', lineHeight:1 }}>{sub}</span>}
                   </button>
                 );
               })}
             </div>
 
-            {/* Legend + export/clear inline */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap', paddingBottom: '14px', marginBottom: '18px', borderBottom: '0.5px solid rgba(245,239,230,0.08)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                <span style={{ color: 'rgba(245,239,230,0.32)', fontSize: '0.68rem', fontFamily: 'Inter, sans-serif' }}>Energy:</span>
+            {/* Legend + export/clear */}
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:'10px', flexWrap:'wrap', paddingBottom:'14px', marginBottom:'18px', borderBottom:'0.5px solid rgba(245,239,230,0.08)' }}>
+              <div style={{ display:'flex', alignItems:'center', gap:'8px', flexWrap:'wrap' }}>
+                <span style={{ color:'rgba(245,239,230,0.32)', fontSize:'0.68rem', fontFamily:'Inter, sans-serif' }}>Energy:</span>
                 {(['good','neutral','tired','drained']).map(k => (
-                  <div key={k} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <div style={{ width: '13px', height: '13px', borderRadius: '3px', background: ENERGY_TINTS[k].bg, border: `1px solid ${ENERGY_TINTS[k].text}45` }} />
-                    <span style={{ color: 'rgba(245,239,230,0.42)', fontSize: '0.68rem', fontFamily: 'Inter, sans-serif' }}>{ENERGY_TINTS[k].label}</span>
+                  <div key={k} style={{ display:'flex', alignItems:'center', gap:'4px' }}>
+                    <div style={{ width:'13px', height:'13px', borderRadius:'3px', background:ENERGY_TINTS[k].bg, border:`1px solid ${ENERGY_TINTS[k].text}45` }} />
+                    <span style={{ color:'rgba(245,239,230,0.42)', fontSize:'0.68rem', fontFamily:'Inter, sans-serif' }}>{ENERGY_TINTS[k].label}</span>
                   </div>
                 ))}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <div style={{ width: '13px', height: '13px', borderRadius: '3px', border: '1px dashed rgba(245,239,230,0.18)' }} />
-                  <span style={{ color: 'rgba(245,239,230,0.42)', fontSize: '0.68rem', fontFamily: 'Inter, sans-serif' }}>No entry</span>
+                <div style={{ display:'flex', alignItems:'center', gap:'4px' }}>
+                  <div style={{ width:'13px', height:'13px', borderRadius:'3px', border:'1px dashed rgba(245,239,230,0.18)' }} />
+                  <span style={{ color:'rgba(245,239,230,0.42)', fontSize:'0.68rem', fontFamily:'Inter, sans-serif' }}>No entry</span>
                 </div>
               </div>
-              <div style={{ display: 'flex', gap: '7px', flexShrink: 0 }}>
-                <button onClick={exportJournal} style={{ background: 'rgba(212,168,83,0.1)', color: '#d4a853', border: '1px solid rgba(212,168,83,0.2)', borderRadius: '8px', padding: '5px 10px', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'Inter, sans-serif', transition: 'all 0.2s', whiteSpace: 'nowrap' }}
-                  onMouseEnter={e => e.currentTarget.style.background='rgba(212,168,83,0.18)'}
-                  onMouseLeave={e => e.currentTarget.style.background='rgba(212,168,83,0.1)'}
+              <div style={{ display:'flex', gap:'7px', flexShrink:0 }}>
+                <button onClick={exportJournal} style={{ background:'rgba(212,168,83,0.1)', color:'#d4a853', border:'1px solid rgba(212,168,83,0.2)', borderRadius:'8px', padding:'5px 10px', fontSize:'0.72rem', fontWeight:600, cursor:'pointer', fontFamily:'Inter, sans-serif', transition:'all 0.2s', whiteSpace:'nowrap' }}
+                  onMouseEnter={e=>e.currentTarget.style.background='rgba(212,168,83,0.18)'}
+                  onMouseLeave={e=>e.currentTarget.style.background='rgba(212,168,83,0.1)'}
                 >Export</button>
-                <button onClick={clearAllEntries} style={{ background: confirmClear?'rgba(232,152,122,0.12)':'rgba(245,239,230,0.04)', color: confirmClear?'#e8987a':'rgba(245,239,230,0.28)', border: confirmClear?'1px solid rgba(232,152,122,0.3)':'1px solid rgba(245,239,230,0.08)', borderRadius: '8px', padding: '5px 10px', fontSize: '0.72rem', cursor: 'pointer', fontFamily: 'Inter, sans-serif', transition: 'all 0.2s', whiteSpace: 'nowrap' }}>
+                <button onClick={clearAllEntries} style={{ background:confirmClear?'rgba(232,152,122,0.12)':'rgba(245,239,230,0.04)', color:confirmClear?'#e8987a':'rgba(245,239,230,0.28)', border:confirmClear?'1px solid rgba(232,152,122,0.3)':'1px solid rgba(245,239,230,0.08)', borderRadius:'8px', padding:'5px 10px', fontSize:'0.72rem', cursor:'pointer', fontFamily:'Inter, sans-serif', transition:'all 0.2s', whiteSpace:'nowrap' }}>
                   {confirmClear ? 'Confirm clear?' : 'Clear all'}
                 </button>
               </div>
@@ -3007,156 +3028,123 @@
 
             {/* Entry preview */}
             {selectedDay && selectedEntry ? (
-              <div className="fade-in" style={{ background: 'rgba(245,239,230,0.05)', border: '1px solid rgba(245,239,230,0.1)', borderRadius: '18px', padding: '20px', marginBottom: '28px' }}>
-                {/* Header row: date + action buttons */}
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '14px', gap: '12px' }}>
-                  <p className="font-serif" style={{ color: '#d4a853', fontSize: '1rem', fontWeight: 600 }}>{formatDateNice(selectedDateStr)}</p>
+              <div className="fade-in" style={{ background:'rgba(245,239,230,0.05)', border:'1px solid rgba(245,239,230,0.1)', borderRadius:'18px', padding:'20px', marginBottom:'28px' }}>
+                <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:'14px', gap:'12px' }}>
+                  <p className="font-serif" style={{ color:'#d4a853', fontSize:'1rem', fontWeight:600 }}>{formatDateNice(selectedDateStr)}</p>
                   {editMode ? (
-                    <span style={{ color: 'rgba(245,239,230,0.3)', fontSize: '0.74rem', fontFamily: 'Inter, sans-serif', flexShrink: 0 }}>editing</span>
+                    <span style={{ color:'rgba(245,239,230,0.3)', fontSize:'0.74rem', fontFamily:'Inter, sans-serif', flexShrink:0 }}>editing</span>
                   ) : deleteConfirm ? (
-                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }}>
-                      <span style={{ color: 'rgba(245,239,230,0.45)', fontSize: '0.76rem', fontFamily: 'Inter, sans-serif' }}>Delete?</span>
-                      <button onClick={handleDeleteEntry} style={{ background: 'none', border: 'none', color: '#e8987a', fontSize: '0.76rem', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}>Confirm</button>
-                      <button onClick={() => setDeleteConfirm(false)} style={{ background: 'none', border: 'none', color: 'rgba(245,239,230,0.35)', fontSize: '0.76rem', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}>Cancel</button>
+                    <div style={{ display:'flex', gap:'8px', alignItems:'center', flexShrink:0 }}>
+                      <span style={{ color:'rgba(245,239,230,0.45)', fontSize:'0.76rem', fontFamily:'Inter, sans-serif' }}>Delete?</span>
+                      <button onClick={handleDeleteEntry} style={{ background:'none', border:'none', color:'#e8987a', fontSize:'0.76rem', cursor:'pointer', fontFamily:'Inter, sans-serif' }}>Confirm</button>
+                      <button onClick={()=>setDeleteConfirm(false)} style={{ background:'none', border:'none', color:'rgba(245,239,230,0.35)', fontSize:'0.76rem', cursor:'pointer', fontFamily:'Inter, sans-serif' }}>Cancel</button>
                     </div>
                   ) : (
-                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexShrink: 0 }}>
-                      <button onClick={enterEditMode} style={{ background: 'none', border: 'none', color: 'rgba(245,239,230,0.35)', fontSize: '0.76rem', cursor: 'pointer', fontFamily: 'Inter, sans-serif', transition: 'color 0.2s' }}
-                        onMouseEnter={e => e.currentTarget.style.color='rgba(245,239,230,0.7)'}
-                        onMouseLeave={e => e.currentTarget.style.color='rgba(245,239,230,0.35)'}
+                    <div style={{ display:'flex', gap:'12px', alignItems:'center', flexShrink:0 }}>
+                      <button onClick={enterEditMode} style={{ background:'none', border:'none', color:'rgba(245,239,230,0.35)', fontSize:'0.76rem', cursor:'pointer', fontFamily:'Inter, sans-serif', transition:'color 0.2s' }}
+                        onMouseEnter={e=>e.currentTarget.style.color='rgba(245,239,230,0.7)'}
+                        onMouseLeave={e=>e.currentTarget.style.color='rgba(245,239,230,0.35)'}
                       >Edit entry</button>
-                      <button onClick={() => setDeleteConfirm(true)} style={{ background: 'none', border: 'none', color: 'rgba(245,239,230,0.25)', fontSize: '0.76rem', cursor: 'pointer', fontFamily: 'Inter, sans-serif', transition: 'color 0.2s' }}
-                        onMouseEnter={e => e.currentTarget.style.color='#e8987a'}
-                        onMouseLeave={e => e.currentTarget.style.color='rgba(245,239,230,0.25)'}
+                      <button onClick={()=>setDeleteConfirm(true)} style={{ background:'none', border:'none', color:'rgba(245,239,230,0.25)', fontSize:'0.76rem', cursor:'pointer', fontFamily:'Inter, sans-serif', transition:'color 0.2s' }}
+                        onMouseEnter={e=>e.currentTarget.style.color='#e8987a'}
+                        onMouseLeave={e=>e.currentTarget.style.color='rgba(245,239,230,0.25)'}
                       >Delete entry</button>
                     </div>
                   )}
                 </div>
 
                 {editMode && editData ? (
-                  /* ── Edit mode ── */
                   <div>
-                    {/* Energy re-selector */}
-                    <p style={{ color: 'rgba(245,239,230,0.45)', fontSize: '0.75rem', fontFamily: 'Inter, sans-serif', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Body feeling</p>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '16px' }}>
-                      {[
-                        { value: 'drained', emoji: '🪫', label: 'Completely drained' },
-                        { value: 'tired',   emoji: '😴', label: 'Tired but okay' },
-                        { value: 'neutral', emoji: '😐', label: 'Neutral' },
-                        { value: 'good',    emoji: '✨', label: 'Surprisingly good' },
-                      ].map(opt => (
-                        <button key={opt.value} onClick={() => setEditData(d => ({ ...d, energyLevel: opt.value }))}
-                          style={{ display: 'flex', alignItems: 'center', gap: '10px', background: editData.energyLevel === opt.value ? 'rgba(196,113,79,0.18)' : 'rgba(245,239,230,0.04)', border: editData.energyLevel === opt.value ? '1px solid rgba(196,113,79,0.5)' : '1px solid rgba(245,239,230,0.1)', borderRadius: '10px', padding: '9px 13px', cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s' }}
-                        >
-                          <span style={{ fontSize: '1rem' }}>{opt.emoji}</span>
-                          <span style={{ color: editData.energyLevel === opt.value ? '#f5efe6' : 'rgba(245,239,230,0.55)', fontSize: '0.84rem', fontFamily: 'Inter, sans-serif' }}>{opt.label}</span>
+                    <p style={{ color:'rgba(245,239,230,0.45)', fontSize:'0.75rem', fontFamily:'Inter, sans-serif', marginBottom:'8px', textTransform:'uppercase', letterSpacing:'0.06em' }}>Body feeling</p>
+                    <div style={{ display:'flex', flexDirection:'column', gap:'6px', marginBottom:'16px' }}>
+                      {[{value:'drained',emoji:'🪫',label:'Completely drained'},{value:'tired',emoji:'😴',label:'Tired but okay'},{value:'neutral',emoji:'😐',label:'Neutral'},{value:'good',emoji:'✨',label:'Surprisingly good'}].map(opt => (
+                        <button key={opt.value} onClick={()=>setEditData(d=>({...d,energyLevel:opt.value}))}
+                          style={{ display:'flex', alignItems:'center', gap:'10px', background:editData.energyLevel===opt.value?'rgba(196,113,79,0.18)':'rgba(245,239,230,0.04)', border:editData.energyLevel===opt.value?'1px solid rgba(196,113,79,0.5)':'1px solid rgba(245,239,230,0.1)', borderRadius:'10px', padding:'9px 13px', cursor:'pointer', textAlign:'left', transition:'all 0.15s' }}>
+                          <span style={{ fontSize:'1rem' }}>{opt.emoji}</span>
+                          <span style={{ color:editData.energyLevel===opt.value?'#f5efe6':'rgba(245,239,230,0.55)', fontSize:'0.84rem', fontFamily:'Inter, sans-serif' }}>{opt.label}</span>
                         </button>
                       ))}
                     </div>
-
-                    {/* Mental re-selector */}
-                    <p style={{ color: 'rgba(245,239,230,0.45)', fontSize: '0.75rem', fontFamily: 'Inter, sans-serif', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Head feeling</p>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '20px' }}>
-                      {[
-                        { value: 'overstimulated', emoji: '🌀', label: 'Overstimulated' },
-                        { value: 'foggy',          emoji: '🌫️',  label: 'Foggy and kind of blank' },
-                        { value: 'clear',          emoji: '🙂', label: 'Clear enough' },
-                      ].map(opt => (
-                        <button key={opt.value} onClick={() => setEditData(d => ({ ...d, mentalState: opt.value }))}
-                          style={{ display: 'flex', alignItems: 'center', gap: '10px', background: editData.mentalState === opt.value ? 'rgba(196,113,79,0.18)' : 'rgba(245,239,230,0.04)', border: editData.mentalState === opt.value ? '1px solid rgba(196,113,79,0.5)' : '1px solid rgba(245,239,230,0.1)', borderRadius: '10px', padding: '9px 13px', cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s' }}
-                        >
-                          <span style={{ fontSize: '1rem' }}>{opt.emoji}</span>
-                          <span style={{ color: editData.mentalState === opt.value ? '#f5efe6' : 'rgba(245,239,230,0.55)', fontSize: '0.84rem', fontFamily: 'Inter, sans-serif' }}>{opt.label}</span>
+                    <p style={{ color:'rgba(245,239,230,0.45)', fontSize:'0.75rem', fontFamily:'Inter, sans-serif', marginBottom:'8px', textTransform:'uppercase', letterSpacing:'0.06em' }}>Head feeling</p>
+                    <div style={{ display:'flex', flexDirection:'column', gap:'6px', marginBottom:'20px' }}>
+                      {[{value:'overstimulated',emoji:'🌀',label:'Overstimulated'},{value:'foggy',emoji:'🌫️',label:'Foggy and kind of blank'},{value:'clear',emoji:'🙂',label:'Clear enough'}].map(opt => (
+                        <button key={opt.value} onClick={()=>setEditData(d=>({...d,mentalState:opt.value}))}
+                          style={{ display:'flex', alignItems:'center', gap:'10px', background:editData.mentalState===opt.value?'rgba(196,113,79,0.18)':'rgba(245,239,230,0.04)', border:editData.mentalState===opt.value?'1px solid rgba(196,113,79,0.5)':'1px solid rgba(245,239,230,0.1)', borderRadius:'10px', padding:'9px 13px', cursor:'pointer', textAlign:'left', transition:'all 0.15s' }}>
+                          <span style={{ fontSize:'1rem' }}>{opt.emoji}</span>
+                          <span style={{ color:editData.mentalState===opt.value?'#f5efe6':'rgba(245,239,230,0.55)', fontSize:'0.84rem', fontFamily:'Inter, sans-serif' }}>{opt.label}</span>
                         </button>
                       ))}
                     </div>
-
-                    <div style={{ borderTop: '0.5px solid rgba(245,239,230,0.08)', marginBottom: '16px' }} />
-
-                    {/* Prompt textareas */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '20px' }}>
-                      {editData.prompts.map((p, i) => (
+                    <div style={{ borderTop:'0.5px solid rgba(245,239,230,0.08)', marginBottom:'16px' }} />
+                    <div style={{ display:'flex', flexDirection:'column', gap:'16px', marginBottom:'20px' }}>
+                      {editData.prompts.map((p,i) => (
                         <div key={i}>
-                          <p className="font-serif" style={{ color: 'rgba(245,239,230,0.48)', fontSize: '0.87rem', fontStyle: 'italic', marginBottom: '6px' }}>{p.question}</p>
-                          <textarea
-                            value={p.answer}
-                            onChange={e => setEditData(d => ({ ...d, prompts: d.prompts.map((pr, j) => j === i ? { ...pr, answer: e.target.value } : pr) }))}
-                            style={{ width: '100%', boxSizing: 'border-box', background: 'rgba(245,239,230,0.06)', border: '1px solid rgba(245,239,230,0.12)', borderRadius: '10px', padding: '12px', color: '#f5efe6', fontSize: '0.88rem', lineHeight: 1.6, resize: 'vertical', outline: 'none', minHeight: '90px', fontFamily: 'Inter, sans-serif' }}
+                          <p className="font-serif" style={{ color:'rgba(245,239,230,0.48)', fontSize:'0.87rem', fontStyle:'italic', marginBottom:'6px' }}>{p.question}</p>
+                          <textarea value={p.answer} onChange={e=>setEditData(d=>({...d,prompts:d.prompts.map((pr,j)=>j===i?{...pr,answer:e.target.value}:pr)}))}
+                            style={{ width:'100%', boxSizing:'border-box', background:'rgba(245,239,230,0.06)', border:'1px solid rgba(245,239,230,0.12)', borderRadius:'10px', padding:'12px', color:'#f5efe6', fontSize:'0.88rem', lineHeight:1.6, resize:'vertical', outline:'none', minHeight:'90px', fontFamily:'Inter, sans-serif' }}
                           />
                         </div>
                       ))}
                     </div>
-
-                    {/* Notes */}
-                    <div style={{ marginBottom: '20px' }}>
-                      <p style={{ color: 'rgba(245,239,230,0.45)', fontSize: '0.75rem', fontFamily: 'Inter, sans-serif', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Notes</p>
-                      <textarea
-                        value={editData.notes || ''}
-                        onChange={e => setEditData(d => ({ ...d, notes: e.target.value }))}
-                        placeholder="A thought, a moment, anything..."
-                        style={{ width: '100%', boxSizing: 'border-box', background: 'rgba(245,239,230,0.06)', border: '1px solid rgba(245,239,230,0.12)', borderRadius: '10px', padding: '12px', color: '#f5efe6', fontSize: '0.88rem', lineHeight: 1.6, resize: 'vertical', outline: 'none', minHeight: '80px', fontFamily: 'Inter, sans-serif' }}
+                    <div style={{ marginBottom:'20px' }}>
+                      <p style={{ color:'rgba(245,239,230,0.45)', fontSize:'0.75rem', fontFamily:'Inter, sans-serif', marginBottom:'8px', textTransform:'uppercase', letterSpacing:'0.06em' }}>Notes</p>
+                      <textarea value={editData.notes||''} onChange={e=>setEditData(d=>({...d,notes:e.target.value}))} placeholder="A thought, a moment, anything..."
+                        style={{ width:'100%', boxSizing:'border-box', background:'rgba(245,239,230,0.06)', border:'1px solid rgba(245,239,230,0.12)', borderRadius:'10px', padding:'12px', color:'#f5efe6', fontSize:'0.88rem', lineHeight:1.6, resize:'vertical', outline:'none', minHeight:'80px', fontFamily:'Inter, sans-serif' }}
                       />
                     </div>
-
-                    {/* Save / Cancel */}
-                    <div style={{ display: 'flex', gap: '10px' }}>
+                    <div style={{ display:'flex', gap:'10px' }}>
                       <button onClick={handleSaveEdit}
-                        style={{ flex: 1, background: '#c4714f', color: '#f5efe6', border: 'none', borderRadius: '12px', padding: '12px', fontSize: '0.88rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'Inter, sans-serif', transition: 'background 0.2s' }}
-                        onMouseEnter={e => e.currentTarget.style.background='#a35a3a'}
-                        onMouseLeave={e => e.currentTarget.style.background='#c4714f'}
+                        style={{ flex:1, background:'#c4714f', color:'#f5efe6', border:'none', borderRadius:'12px', padding:'12px', fontSize:'0.88rem', fontWeight:600, cursor:'pointer', fontFamily:'Inter, sans-serif', transition:'background 0.2s' }}
+                        onMouseEnter={e=>e.currentTarget.style.background='#a35a3a'} onMouseLeave={e=>e.currentTarget.style.background='#c4714f'}
                       >Save changes</button>
-                      <button onClick={() => { setEditMode(false); setEditData(null); }}
-                        style={{ flex: 1, background: 'transparent', color: 'rgba(245,239,230,0.5)', border: '1px solid rgba(245,239,230,0.15)', borderRadius: '12px', padding: '12px', fontSize: '0.88rem', cursor: 'pointer', fontFamily: 'Inter, sans-serif', transition: 'all 0.2s' }}
-                        onMouseEnter={e => { e.currentTarget.style.borderColor='rgba(245,239,230,0.35)'; e.currentTarget.style.color='rgba(245,239,230,0.8)'; }}
-                        onMouseLeave={e => { e.currentTarget.style.borderColor='rgba(245,239,230,0.15)'; e.currentTarget.style.color='rgba(245,239,230,0.5)'; }}
+                      <button onClick={()=>{setEditMode(false);setEditData(null);}}
+                        style={{ flex:1, background:'transparent', color:'rgba(245,239,230,0.5)', border:'1px solid rgba(245,239,230,0.15)', borderRadius:'12px', padding:'12px', fontSize:'0.88rem', cursor:'pointer', fontFamily:'Inter, sans-serif', transition:'all 0.2s' }}
+                        onMouseEnter={e=>{e.currentTarget.style.borderColor='rgba(245,239,230,0.35)';e.currentTarget.style.color='rgba(245,239,230,0.8)';}}
+                        onMouseLeave={e=>{e.currentTarget.style.borderColor='rgba(245,239,230,0.15)';e.currentTarget.style.color='rgba(245,239,230,0.5)';}}
                       >Cancel</button>
                     </div>
                   </div>
                 ) : (
-                  /* ── Read mode ── */
                   <div>
                     {(selectedEntry.energyLevel || selectedEntry.mentalState) && (
-                      <div style={{ display: 'flex', gap: '7px', flexWrap: 'wrap', marginBottom: '16px' }}>
+                      <div style={{ display:'flex', gap:'7px', flexWrap:'wrap', marginBottom:'16px' }}>
                         {selectedEntry.energyLevel && (() => {
                           const t = ENERGY_TINTS[selectedEntry.energyLevel];
-                          return <span style={{ background: t?t.bg:'rgba(245,239,230,0.07)', color: t?t.text:'rgba(245,239,230,0.65)', borderRadius: '20px', padding: '4px 11px', fontSize: '0.79rem', fontFamily: 'Inter, sans-serif', border: t?`1px solid ${t.text}30`:'none' }}>{energyEmoji[selectedEntry.energyLevel]} {energyLabel[selectedEntry.energyLevel]}</span>;
+                          return <span style={{ background:t?t.bg:'rgba(245,239,230,0.07)', color:t?t.text:'rgba(245,239,230,0.65)', borderRadius:'20px', padding:'4px 11px', fontSize:'0.79rem', fontFamily:'Inter, sans-serif', border:t?`1px solid ${t.text}30`:'none' }}>{energyEmoji[selectedEntry.energyLevel]} {energyLabel[selectedEntry.energyLevel]}</span>;
                         })()}
                         {selectedEntry.mentalState && (
-                          <span style={{ background: 'rgba(245,239,230,0.07)', borderRadius: '20px', padding: '4px 11px', fontSize: '0.79rem', color: 'rgba(245,239,230,0.6)', fontFamily: 'Inter, sans-serif' }}>{mentalEmoji[selectedEntry.mentalState]} {mentalLabel[selectedEntry.mentalState]}</span>
+                          <span style={{ background:'rgba(245,239,230,0.07)', borderRadius:'20px', padding:'4px 11px', fontSize:'0.79rem', color:'rgba(245,239,230,0.6)', fontFamily:'Inter, sans-serif' }}>{mentalEmoji[selectedEntry.mentalState]} {mentalLabel[selectedEntry.mentalState]}</span>
                         )}
                         {selectedEntry.emotionTone && (
-                          <span style={{ background: 'rgba(245,239,230,0.07)', borderRadius: '20px', padding: '4px 11px', fontSize: '0.79rem', color: 'rgba(245,239,230,0.6)', fontFamily: 'Inter, sans-serif' }}>{emotionEmoji[selectedEntry.emotionTone]} {emotionLabel[selectedEntry.emotionTone]}</span>
+                          <span style={{ background:'rgba(245,239,230,0.07)', borderRadius:'20px', padding:'4px 11px', fontSize:'0.79rem', color:'rgba(245,239,230,0.6)', fontFamily:'Inter, sans-serif' }}>{emotionEmoji[selectedEntry.emotionTone]} {emotionLabel[selectedEntry.emotionTone]}</span>
                         )}
                         {selectedEntry.stressIntensity && (
-                          <span style={{ background: 'rgba(245,239,230,0.07)', borderRadius: '20px', padding: '4px 11px', fontSize: '0.79rem', color: 'rgba(245,239,230,0.6)', fontFamily: 'Inter, sans-serif' }}>{stressEmoji[selectedEntry.stressIntensity]} {stressLabel[selectedEntry.stressIntensity]}</span>
+                          <span style={{ background:'rgba(245,239,230,0.07)', borderRadius:'20px', padding:'4px 11px', fontSize:'0.79rem', color:'rgba(245,239,230,0.6)', fontFamily:'Inter, sans-serif' }}>{stressEmoji[selectedEntry.stressIntensity]} {stressLabel[selectedEntry.stressIntensity]}</span>
                         )}
                       </div>
                     )}
-
-                    <div style={{ borderTop: '0.5px solid rgba(245,239,230,0.08)', marginBottom: '14px' }} />
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                      {selectedEntry.prompts && selectedEntry.prompts.map((p, i) => (
+                    <div style={{ borderTop:'0.5px solid rgba(245,239,230,0.08)', marginBottom:'14px' }} />
+                    <div style={{ display:'flex', flexDirection:'column', gap:'16px' }}>
+                      {selectedEntry.prompts && selectedEntry.prompts.map((p,i) => (
                         <div key={i}>
-                          <p className="font-serif" style={{ color: 'rgba(245,239,230,0.48)', fontSize: '0.87rem', fontStyle: 'italic', marginBottom: '4px' }}>{p.question}</p>
-                          <p style={{ color: '#f5efe6', fontSize: '0.9rem', lineHeight: 1.65, fontFamily: 'Inter, sans-serif', whiteSpace: 'pre-wrap' }}>
-                            {p.answer || <em style={{ opacity: 0.35 }}>No answer written</em>}
+                          <p className="font-serif" style={{ color:'rgba(245,239,230,0.48)', fontSize:'0.87rem', fontStyle:'italic', marginBottom:'4px' }}>{p.question}</p>
+                          <p style={{ color:'#f5efe6', fontSize:'0.9rem', lineHeight:1.65, fontFamily:'Inter, sans-serif', whiteSpace:'pre-wrap' }}>
+                            {p.answer || <em style={{ opacity:0.35 }}>No answer written</em>}
                           </p>
                         </div>
                       ))}
                     </div>
-
                     {selectedEntry.notes && (
                       <>
-                        <div style={{ borderTop: '0.5px solid rgba(245,239,230,0.08)', margin: '16px 0 12px' }} />
-                        <p style={{ color: 'rgba(245,239,230,0.32)', fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: 'Inter, sans-serif', marginBottom: '6px' }}>Notes</p>
-                        <p style={{ color: 'rgba(245,239,230,0.65)', fontSize: '0.88rem', lineHeight: 1.6, fontFamily: 'Inter, sans-serif', whiteSpace: 'pre-wrap' }}>{selectedEntry.notes}</p>
+                        <div style={{ borderTop:'0.5px solid rgba(245,239,230,0.08)', margin:'16px 0 12px' }} />
+                        <p style={{ color:'rgba(245,239,230,0.32)', fontSize:'0.7rem', fontWeight:600, letterSpacing:'0.08em', textTransform:'uppercase', fontFamily:'Inter, sans-serif', marginBottom:'6px' }}>Notes</p>
+                        <p style={{ color:'rgba(245,239,230,0.65)', fontSize:'0.88rem', lineHeight:1.6, fontFamily:'Inter, sans-serif', whiteSpace:'pre-wrap' }}>{selectedEntry.notes}</p>
                       </>
                     )}
                     {selectedEntry.recommendedActivity && (
                       <>
-                        <div style={{ borderTop: '0.5px solid rgba(245,239,230,0.08)', margin: '16px 0 12px' }} />
-                        <p style={{ color: 'rgba(245,239,230,0.36)', fontSize: '0.79rem', fontFamily: 'Inter, sans-serif' }}>
+                        <div style={{ borderTop:'0.5px solid rgba(245,239,230,0.08)', margin:'16px 0 12px' }} />
+                        <p style={{ color:'rgba(245,239,230,0.36)', fontSize:'0.79rem', fontFamily:'Inter, sans-serif' }}>
                           Chose that night: {selectedEntry.recommendedActivity.emoji} {selectedEntry.recommendedActivity.name}
                         </p>
                       </>
@@ -3165,85 +3153,11 @@
                 )}
               </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '36px 20px', opacity: 0.28 }}>
-                <div style={{ fontSize: '1.5rem', marginBottom: '7px' }}>🌙</div>
-                <p style={{ color: '#f5efe6', fontFamily: 'Inter, sans-serif', fontSize: '0.83rem' }}>Select a day to read that entry.</p>
+              <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'36px 20px', opacity:0.28 }}>
+                <div style={{ fontSize:'1.5rem', marginBottom:'7px' }}>🌙</div>
+                <p style={{ color:'#f5efe6', fontFamily:'Inter, sans-serif', fontSize:'0.83rem' }}>Select a day to read that entry.</p>
               </div>
             )}
-
-          </div>
-
-          {/* ── Right column: Reviews ── */}
-          <div style={{ width: '220px', flexShrink: 0, borderLeft: '0.5px solid rgba(245,239,230,0.08)', overflowY: 'auto', padding: '18px 12px' }}>
-            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'14px' }}>
-              <span style={{ color:'rgba(245,239,230,0.55)', fontSize:'0.7rem', fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase', fontFamily:'Inter, sans-serif' }}>Reviews</span>
-              <NavArrows year={revNavYear} month={revNavMonth} onPrev={prevRevMonth} onNext={nextRevMonth} label={`${MONTH_NAMES[revNavMonth].slice(0,3)} ${revNavYear}`} />
-            </div>
-
-            {/* Month review card */}
-            {(() => {
-              const intKey = revMonthKey;
-              const review = loadReviewForKey('month', intKey);
-              const hasDone = !!review;
-              const intention = loadIntention(intKey);
-              const hasIntention = !!(intention && (intention.sentence || intention.items?.length > 0 || intention.focusWords?.length > 0));
-              const badge = hasDone
-                ? { label: 'Done', bg: '#D6ECD2', color: '#2E6B27' }
-                : hasIntention
-                  ? { label: 'Pending', bg: '#FAE8D0', color: '#854F0B' }
-                  : { label: 'Not yet', bg: 'rgba(245,239,230,0.06)', color: 'rgba(245,239,230,0.35)' };
-              return (
-                <div style={{ background:'rgba(196,113,79,0.07)', border:'1px solid rgba(196,113,79,0.16)', borderRadius:'13px', padding:'12px', marginBottom:'8px' }}>
-                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'8px' }}>
-                    <span style={{ color:'rgba(245,239,230,0.42)', fontSize:'0.63rem', fontWeight:700, letterSpacing:'0.09em', textTransform:'uppercase', fontFamily:'Inter, sans-serif' }}>{MONTH_NAMES[revNavMonth]}</span>
-                    <span style={{ background:badge.bg, color:badge.color, borderRadius:'20px', padding:'2px 8px', fontSize:'0.62rem', fontFamily:'Inter, sans-serif', fontWeight:600 }}>{badge.label}</span>
-                  </div>
-                  {hasDone && review.answers && (() => {
-                    const lastQ = review.answers[Object.keys(review.answers).length - 1];
-                    const word = lastQ?.text;
-                    return word ? <p className="font-serif" style={{ color:'rgba(245,239,230,0.55)', fontSize:'0.8rem', fontStyle:'italic', marginBottom:'8px' }}>"{word}"</p> : null;
-                  })()}
-                  <button onClick={() => startReview('month', intKey, review?.answers)}
-                    style={{ width:'100%', background:'rgba(245,239,230,0.04)', border:'1px solid rgba(245,239,230,0.09)', borderRadius:'8px', color:'rgba(245,239,230,0.45)', fontSize:'0.69rem', cursor:'pointer', padding:'7px', fontFamily:'Inter, sans-serif', transition:'all 0.2s' }}
-                    onMouseEnter={e=>{e.currentTarget.style.background='rgba(245,239,230,0.08)';e.currentTarget.style.color='rgba(245,239,230,0.75)';}}
-                    onMouseLeave={e=>{e.currentTarget.style.background='rgba(245,239,230,0.04)';e.currentTarget.style.color='rgba(245,239,230,0.45)';}}>
-                    {hasDone ? 'Edit review →' : 'Start review →'}
-                  </button>
-                </div>
-              );
-            })()}
-
-            {/* Weekly review cards for the selected month */}
-            {revWeeks.map(({ weekKey: wk, label }) => {
-              const review = loadReviewForKey('week', wk);
-              const hasDone = !!review;
-              const intention = loadIntention(wk);
-              const hasIntention = !!(intention && (intention.sentence || intention.items?.length > 0 || intention.focusWords?.length > 0));
-              const badge = hasDone
-                ? { label: 'Done', bg: '#D6ECD2', color: '#2E6B27' }
-                : hasIntention
-                  ? { label: 'Pending', bg: '#FAE8D0', color: '#854F0B' }
-                  : { label: 'Not yet', bg: 'rgba(245,239,230,0.06)', color: 'rgba(245,239,230,0.35)' };
-              return (
-                <div key={wk} style={{ background:'rgba(245,239,230,0.03)', border:'1px solid rgba(245,239,230,0.07)', borderRadius:'13px', padding:'12px', marginBottom:'8px' }}>
-                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'8px' }}>
-                    <span style={{ color:'rgba(245,239,230,0.38)', fontSize:'0.62rem', fontWeight:600, letterSpacing:'0.08em', textTransform:'uppercase', fontFamily:'Inter, sans-serif' }}>Wk of {label}</span>
-                    <span style={{ background:badge.bg, color:badge.color, borderRadius:'20px', padding:'2px 8px', fontSize:'0.62rem', fontFamily:'Inter, sans-serif', fontWeight:600 }}>{badge.label}</span>
-                  </div>
-                  {hasDone && review.answers && (() => {
-                    const lastQ = review.answers[Object.keys(review.answers).length - 1];
-                    const word = lastQ?.text;
-                    return word ? <p className="font-serif" style={{ color:'rgba(245,239,230,0.52)', fontSize:'0.77rem', fontStyle:'italic', marginBottom:'7px' }}>"{word}"</p> : null;
-                  })()}
-                  <button onClick={() => startReview('week', wk, review?.answers)}
-                    style={{ width:'100%', background:'rgba(245,239,230,0.04)', border:'1px solid rgba(245,239,230,0.08)', borderRadius:'8px', color:'rgba(245,239,230,0.4)', fontSize:'0.67rem', cursor:'pointer', padding:'6px', fontFamily:'Inter, sans-serif', transition:'all 0.2s' }}
-                    onMouseEnter={e=>{e.currentTarget.style.background='rgba(245,239,230,0.08)';e.currentTarget.style.color='rgba(245,239,230,0.72)';}}
-                    onMouseLeave={e=>{e.currentTarget.style.background='rgba(245,239,230,0.04)';e.currentTarget.style.color='rgba(245,239,230,0.4)';}}>
-                    {hasDone ? 'Edit review →' : 'Start review →'}
-                  </button>
-                </div>
-              );
-            })}
           </div>
 
           {/* Review overlay */}
@@ -3256,7 +3170,7 @@
     //  APP
     // ─────────────────────────────────────────────
     function App() {
-      const [screen, setScreen]     = useState('welcome');
+      const [screen, setScreen]     = useState('today');
       const [currentQ, setCurrentQ] = useState(0);
       const [answers, setAnswers]   = useState({});
       const [fading, setFading]     = useState(false);
@@ -3354,7 +3268,7 @@
       }
 
       function handleRestart() {
-        transition(() => { setScreen('welcome'); setAnswers({}); setCurrentQ(0); setJournalInfluence(null); });
+        transition(() => { setScreen('today'); setAnswers({}); setCurrentQ(0); setJournalInfluence(null); });
       }
 
       function handleSaveActivity(activity) {
@@ -3388,7 +3302,7 @@
       }
 
       function handleNavClick(id) {
-        if (id === 'home')       transition(() => { setScreen('welcome'); setAnswers({}); setCurrentQ(0); });
+        if (id === 'today')      transition(() => { setScreen('today'); setAnswers({}); setCurrentQ(0); });
         if (id === 'journal')    transition(() => setScreen('calendar'));
         if (id === 'activities') transition(() => setScreen('activities'));
       }
@@ -3403,13 +3317,10 @@
               </div>
             ) : (
               <>
-                {screen === 'welcome' && (
-                  <WelcomeScreen
+                {screen === 'today' && (
+                  <TodayScreen
                     onWrite={handleWrite}
                     onSkip={handleSkip}
-                    onCalendar={() => transition(() => setScreen('calendar'))}
-                    lastEntry={lastEntry}
-                    lastEnergy={lastEnergy}
                   />
                 )}
                 {screen === 'questions' && (
@@ -3446,12 +3357,12 @@
                 {screen === 'journal' && (
                   <JournalScreen
                     onDone={() => transition(() => setScreen('calendar'))}
-                    onBack={() => transition(() => setScreen('welcome'))}
+                    onBack={() => transition(() => setScreen('today'))}
                   />
                 )}
                 {screen === 'calendar' && (
                   <CalendarScreen
-                    onBack={() => transition(() => setScreen('welcome'))}
+                    onBack={() => transition(() => setScreen('today'))}
                     onWrite={() => transition(() => setScreen('journal'))}
                   />
                 )}
