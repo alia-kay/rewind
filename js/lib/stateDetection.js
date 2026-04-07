@@ -16,6 +16,7 @@ function detectCategory(energy, mental, emotion, stress) {
   if (emotion === 'anxious' || emotion === 'overwhelmed') return 'anxiety';
   if (emotion === 'sad') return 'emotional';
   if (emotion === 'irritated') return 'frustrated';
+  if (emotion === 'hopeful') return 'growth';
   if ((energy === 'tired' || energy === 'drained') && mental === 'foggy') return 'foggy';
   if ((emotion === 'calm' || emotion === 'good') && mental === 'clear' && stress === 'low') return 'growth';
   // Secondary fallbacks

@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Tonight?</title>
+  <title>unwind</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
   <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -110,7 +111,7 @@
       },
       {
         id: 'mental',
-        q: "How's your head tonight?",
+        q: "How's your head right now?",
         options: [
           { value: 'overstimulated', emoji: '🌀', label: "Overstimulated / can't stop thinking" },
           { value: 'foggy',          emoji: '🌫️',  label: 'Foggy and kind of blank' },
@@ -726,6 +727,9 @@
         deep: [
           { text: "What has been building up in me that I haven't had space to process?", tag: "depth" },
           { text: "Where in my life do I feel stretched beyond my limits?",               tag: "boundaries" },
+          { text: "What would it mean to truly rest tonight,\nnot just stop?",            tag: "needs" },
+          { text: "What am I carrying that isn't actually mine?",                         tag: "release" },
+          { text: "If my body could speak right now, what would it ask for?",             tag: "awareness" },
         ],
       },
       foggy: {
@@ -737,6 +741,7 @@
         deep: [
           { text: "What might I be avoiding by staying in this foggy state?",              tag: "depth" },
           { text: "If I slowed down fully, what thoughts would surface?",                  tag: "clarity" },
+          { text: "What decision or conversation have I been\nquietly dreading?",          tag: "awareness" },
         ],
       },
       anxiety: {
@@ -748,6 +753,9 @@
         deep: [
           { text: "What fear is underneath this feeling?",                                  tag: "depth" },
           { text: "When have I felt this before, and what does that tell me?",             tag: "awareness" },
+          { text: "What am I trying to control that I actually cannot?",                   tag: "grounding" },
+          { text: "What would I tell a close friend feeling exactly\nthis way right now?", tag: "release" },
+          { text: "What small thing could make me feel 10% safer\nright now?",             tag: "needs" },
         ],
       },
       emotional: {
@@ -759,6 +767,8 @@
         deep: [
           { text: "What is this feeling asking from me?",                                   tag: "depth" },
           { text: "What part of me feels unseen or unheard?",                              tag: "awareness" },
+          { text: "What have I been silently grieving lately?",                            tag: "depth" },
+          { text: "What would feel like a small act of kindness\ntoward myself tonight?",  tag: "needs" },
         ],
       },
       frustrated: {
@@ -768,8 +778,10 @@
           { text: "What did I hold back from saying?",            tag: "awareness" },
         ],
         deep: [
-          { text: "What boundary might have been crossed?",                                 tag: "boundaries" },
-          { text: "What does this frustration reveal about what I need?",                  tag: "needs" },
+          { text: "What boundary might have been crossed?",                                          tag: "boundaries" },
+          { text: "What does this frustration reveal about what I need?",                           tag: "needs" },
+          { text: "What expectation — of myself or others —\nis underneath this?",                  tag: "awareness" },
+          { text: "What would it feel like to fully let this go,\neven just for tonight?",          tag: "release" },
         ],
       },
       growth: {
@@ -779,8 +791,9 @@
           { text: "What surprised me in a positive way?",         tag: "reflection" },
         ],
         deep: [
-          { text: "What patterns in my life are working well right now?",                  tag: "awareness" },
-          { text: "How can I intentionally create more of this feeling?",                  tag: "forward" },
+          { text: "What patterns in my life are working well right now?",                                tag: "awareness" },
+          { text: "What conditions made today feel more aligned —\n and how could I protect more of those?", tag: "forward" },
+          { text: "If I could design more days like this,\n what would they look like?",                tag: "forward" },
         ],
       },
     };
@@ -824,6 +837,7 @@
       if (emotion === 'anxious' || emotion === 'overwhelmed') return 'anxiety';
       if (emotion === 'sad') return 'emotional';
       if (emotion === 'irritated') return 'frustrated';
+      if (emotion === 'hopeful') return 'growth';
       if ((energy === 'tired' || energy === 'drained') && mental === 'foggy') return 'foggy';
       if ((emotion === 'calm' || emotion === 'good') && mental === 'clear' && stress === 'low') return 'growth';
       // fallbacks
@@ -863,7 +877,7 @@
     function getContextualIntroMessage(emotion, mental, stress) {
       if (stress === 'high')                                  return "Let's slow things down a bit.";
       if (emotion === 'anxious' || emotion === 'overwhelmed') return "Let's unpack what's on your mind.";
-      if (mental === 'clear')                                 return "You seem clear tonight — let's build on that.";
+      if (mental === 'clear')                                 return `You seem clear ${getTimeWord()} — let's build on that.`;
       return "Take a moment for yourself.";
     }
 
@@ -925,6 +939,17 @@
     }
 
     // ─────────────────────────────────────────────
+    //  MOON ICON (used in nav, empty states, loader)
+    // ─────────────────────────────────────────────
+    const CandleFlame = ({ width = 20, height = 26, style: extraStyle = {} }) => {
+      const fs = height <= 26 ? '1.1rem' : height <= 38 ? '1.8rem' : '2rem';
+      return <span style={{ fontSize: fs, lineHeight: 1, display: 'inline-block', ...extraStyle }}>🌙</span>;
+    };
+
+    // getTimeWord — 'tonight' from 17:00, 'today' before
+    function getTimeWord() { return new Date().getHours() >= 17 ? 'tonight' : 'today'; }
+
+    // ─────────────────────────────────────────────
     //  TOP NAV
     // ─────────────────────────────────────────────
     function TopNav({ screen, onNav }) {
@@ -958,10 +983,10 @@
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: '0 24px', zIndex: 100,
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: '110px' }}>
-            <span style={{ fontSize: '1.1rem' }}>🌙</span>
-            <span className="font-serif" style={{ color: '#f5efe6', fontSize: '0.9rem', fontWeight: 600 }}>Tonight?</span>
-          </div>
+          <button onClick={() => onNav('today')} style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: '110px', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+            <CandleFlame width={20} height={26} />
+            <span className="font-serif" style={{ color: '#f5efe6', fontSize: '0.9rem', fontWeight: 600 }}>unwind</span>
+          </button>
           <div style={{ display: 'flex', gap: '28px', alignItems: 'center' }}>
             {navBtn(isHome,       'Today',      'today')}
             {navBtn(isJournal,    'Journal',    'journal')}
@@ -999,8 +1024,8 @@
       const energyLabel = { drained:'Completely drained', tired:'Tired but okay', neutral:'Neutral', good:'Surprisingly good' };
       const mentalEmoji = { overstimulated:'🌀', foggy:'🌫️', clear:'🙂' };
       const mentalLabel = { overstimulated:'Overstimulated', foggy:'Foggy and kind of blank', clear:'Clear enough' };
-      const emotionEmoji = { anxious:'😬', overwhelmed:'🌊', sad:'😔', irritated:'😤', calm:'😌', good:'🙂' };
-      const emotionLabel = { anxious:'Anxious', overwhelmed:'Overwhelmed', sad:'Sad', irritated:'Irritated', calm:'Calm', good:'Good' };
+      const emotionEmoji = { anxious:'😬', overwhelmed:'🌊', sad:'😔', irritated:'😤', calm:'😌', good:'🙂', hopeful:'💛' };
+      const emotionLabel = { anxious:'Anxious', overwhelmed:'Overwhelmed', sad:'Sad', irritated:'Irritated', calm:'Calm', good:'Good', hopeful:'Hopeful' };
       const stressEmoji  = { low:'🌿', medium:'🌤️', high:'🔥' };
       const stressLabel  = { low:'Low intensity', medium:'Medium intensity', high:'High intensity' };
       const ENERGY_TINTS = { good:{bg:'#D6ECD2',text:'#2E6B27'}, neutral:{bg:'#FAE8D0',text:'#854F0B'}, tired:{bg:'#FAE8D0',text:'#854F0B'}, drained:{bg:'#F5DDD8',text:'#712B13'} };
@@ -1049,7 +1074,7 @@
                 {/* Today's entry card */}
                 <div style={{ background:'rgba(196,113,79,0.07)', border:'1px solid rgba(196,113,79,0.28)', borderRadius:'18px', padding:'20px', marginBottom:'32px' }}>
                   <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'14px', gap:'10px' }}>
-                    <span className="font-serif" style={{ color:'#d4a853', fontSize:'0.95rem', fontWeight:600 }}>Tonight's entry</span>
+                    <span className="font-serif" style={{ color:'#d4a853', fontSize:'0.95rem', fontWeight:600 }}>{hour >= 17 ? "Tonight's" : "Today's"} entry</span>
                     {editMode ? (
                       <span style={{ color:'rgba(245,239,230,0.3)', fontSize:'0.72rem', fontFamily:'Inter, sans-serif' }}>editing</span>
                     ) : deleteConfirm ? (
@@ -1155,7 +1180,7 @@
               <>
                 {/* CTA card */}
                 <div style={{ background:'rgba(245,239,230,0.04)', border:'1px solid rgba(245,239,230,0.09)', borderRadius:'20px', padding:'40px 32px', textAlign:'center', marginBottom:'32px' }}>
-                  <h2 className="font-serif text-cream" style={{ fontSize:'clamp(1.3rem,4vw,1.6rem)', fontWeight:600, marginBottom:'10px', lineHeight:1.4 }}>How are you arriving tonight?</h2>
+                  <h2 className="font-serif text-cream" style={{ fontSize:'clamp(1.3rem,4vw,1.6rem)', fontWeight:600, marginBottom:'10px', lineHeight:1.4 }}>How are you arriving {getTimeWord()}?</h2>
                   <p style={{ color:'rgba(245,239,230,0.42)', fontSize:'0.95rem', fontFamily:'Inter, sans-serif', marginBottom:'32px', lineHeight:1.6 }}>Take a moment. It's just for you.</p>
                   <button onClick={onWrite}
                     style={{ background:'#c4714f', color:'#f5efe6', border:'none', borderRadius:'16px', padding:'16px 36px', fontSize:'1rem', fontWeight:600, cursor:'pointer', fontFamily:'Inter, sans-serif', boxShadow:'0 4px 24px rgba(196,113,79,0.3)', transition:'all 0.2s ease', display:'block', width:'100%', marginBottom:'12px' }}
@@ -1166,7 +1191,7 @@
                     style={{ background:'transparent', color:'rgba(245,239,230,0.45)', border:'1px solid rgba(245,239,230,0.15)', borderRadius:'14px', padding:'12px 28px', fontSize:'0.9rem', fontWeight:500, cursor:'pointer', fontFamily:'Inter, sans-serif', transition:'all 0.2s ease', display:'block', width:'100%' }}
                     onMouseEnter={e=>{e.currentTarget.style.borderColor='rgba(245,239,230,0.3)';e.currentTarget.style.color='rgba(245,239,230,0.7)';}}
                     onMouseLeave={e=>{e.currentTarget.style.borderColor='rgba(245,239,230,0.15)';e.currentTarget.style.color='rgba(245,239,230,0.45)';}}
-                  >Skip to recommendations →</button>
+                  >Find an activity for {getTimeWord()} →</button>
                 </div>
 
                 {/* Divider */}
@@ -1270,7 +1295,7 @@
             <div>
               {isPrimary && (
                 <span style={{ display: 'inline-block', fontSize: '0.72rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#c4714f', background: 'rgba(196,113,79,0.12)', borderRadius: '20px', padding: '3px 10px', marginBottom: '6px' }}>
-                  Tonight's pick
+                  {getTimeWord() === 'tonight' ? "Tonight's" : "Today's"} pick
                 </span>
               )}
               <h3 className="font-serif" style={{ fontSize: isPrimary ? '1.5rem' : '1.25rem', fontWeight: 600, lineHeight: 1.3, color: isPrimary ? '#1a1a2e' : '#f5efe6' }}>
@@ -1329,7 +1354,7 @@
       if (!top) {
         return (
           <div className="fade-in w-full px-5 text-center" style={{ maxWidth: '480px', paddingTop: '40px' }}>
-            <p className="text-cream font-serif" style={{ opacity: 0.6 }}>Hmm, nothing matched tonight. Try starting over!</p>
+            <p className="text-cream font-serif" style={{ opacity: 0.6 }}>Hmm, nothing matched {getTimeWord()}. Try starting over!</p>
             <button onClick={onRestart} style={{ color: '#c4714f', background: 'none', border: 'none', cursor: 'pointer', marginTop: '20px', fontSize: '0.9rem' }}>Start over</button>
           </div>
         );
@@ -1350,7 +1375,7 @@
               Your evening
             </p>
             <h2 className="font-serif text-cream" style={{ fontSize: 'clamp(1.5rem, 5vw, 2rem)', fontWeight: 600 }}>
-              Here's what fits tonight.
+              Here's what fits {getTimeWord()}.
             </h2>
           </div>
 
@@ -1651,7 +1676,7 @@
                 onMouseEnter={e => e.currentTarget.style.background='#a35a3a'}
                 onMouseLeave={e => e.currentTarget.style.background='#c4714f'}
               >
-                Get tonight's recommendation →
+                Get {getTimeWord()}'s recommendation →
               </button>
               <button
                 onClick={() => setShowModal(true)}
@@ -1769,7 +1794,7 @@
           <div className="activities-right-panel" style={{ flex: 1, height: '100%', overflowY: 'auto', padding: '36px 44px' }}>
             {!selectedActivity ? (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', opacity: 0.28 }}>
-                <div style={{ fontSize: '2rem', marginBottom: '10px' }}>🌙</div>
+                <div style={{ marginBottom: '10px' }}><CandleFlame width={40} height={52} /></div>
                 <p style={{ color: '#f5efe6', fontFamily: 'Inter, sans-serif', fontSize: '0.88rem' }}>Select an activity to see details.</p>
               </div>
             ) : (
@@ -1794,9 +1819,23 @@
     }
 
     // ─────────────────────────────────────────────
+    //  SUPPORTIVE PHRASE (post-journal save screen)
+    // ─────────────────────────────────────────────
+    function getSupportivePhrase(energyLevel, emotionTone, stressIntensity) {
+      const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+      if (energyLevel === 'drained' || stressIntensity === 'high')
+        return pick(["You showed up for yourself tonight. That matters.", "Even on the hardest days, you're here. That's enough."]);
+      if (emotionTone === 'sad' || emotionTone === 'anxious')
+        return pick(["It's okay to not be okay. You wrote it down. That's brave.", "Feelings aren't facts, but they deserve to be heard."]);
+      if (emotionTone === 'hopeful' || energyLevel === 'good')
+        return pick(["Hold onto tonight. You can come back to this feeling.", "Good evenings are worth celebrating, even quietly."]);
+      return "One evening at a time. You're doing it.";
+    }
+
+    // ─────────────────────────────────────────────
     //  JOURNAL SCREEN (two-phase flow)
     // ─────────────────────────────────────────────
-    function JournalScreen({ onDone, onBack }) {
+    function JournalScreen({ onDone, onBack, onFindActivity }) {
       const today = todayStr();
 
       // ── Check-in state ────────────────────────────
@@ -1820,6 +1859,7 @@
       const [notes,        setNotes]        = useState('');
       const [saveConfirm,  setSaveConfirm]  = useState(false);
       const [deleteConfirm,setDeleteConfirm]= useState(false);
+      const [savedScreen,  setSavedScreen]  = useState(false);
 
       // Steps: 0=Q1, 1=Q2, 2=Q3(emotion), 3=Q4(stress), 4=contextual intro, 5…=light prompts
       const totalDots = 4 + lightPrompts.length;
@@ -1923,8 +1963,7 @@
 
       function handleSaveAndDone() {
         saveJournalEntry(buildEntry());
-        setSaveConfirm(true);
-        setTimeout(() => { setSaveConfirm(false); onDone(); }, 1500);
+        setSavedScreen(true);
       }
 
       function handleDelete() {
@@ -1947,12 +1986,13 @@
       ];
 
       const Q3_OPTIONS = [
+        { value: 'hopeful',     emoji: '💛', label: 'Hopeful' },
+        { value: 'good',        emoji: '🙂', label: 'Good' },
+        { value: 'calm',        emoji: '😌', label: 'Calm' },
         { value: 'anxious',     emoji: '😬', label: 'Anxious' },
         { value: 'overwhelmed', emoji: '🌊', label: 'Overwhelmed' },
         { value: 'sad',         emoji: '😔', label: 'Sad' },
         { value: 'irritated',   emoji: '😤', label: 'Irritated' },
-        { value: 'calm',        emoji: '😌', label: 'Calm' },
-        { value: 'good',        emoji: '🙂', label: 'Good' },
       ];
 
       const Q4_OPTIONS = [
@@ -1995,9 +2035,35 @@
         );
       }
 
+      // ── Saved confirmation screen ─────────────────
+      if (savedScreen) {
+        const phrase = getSupportivePhrase(energyLevel, emotionTone, stressIntensity);
+        const tw = getTimeWord();
+        return (
+          <div className="fade-in flex flex-col items-center justify-center px-5 text-center" style={{ maxWidth: '480px', width: '100%', minHeight: 'calc(100vh - 56px)', paddingTop: '40px', paddingBottom: '48px' }}>
+            <h2 className="font-serif text-cream" style={{ fontSize: 'clamp(1.6rem, 6vw, 2.2rem)', fontWeight: 600, marginBottom: '16px' }}>Saved ✓</h2>
+            <p className="font-serif" style={{ color: 'rgba(245,239,230,0.45)', fontSize: '1rem', fontStyle: 'italic', marginBottom: '40px', lineHeight: 1.65 }}>{phrase}</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%' }}>
+              <button
+                onClick={() => onFindActivity && onFindActivity({ energyLevel, mentalState })}
+                style={{ width: '100%', background: '#c4714f', color: '#f5efe6', border: 'none', borderRadius: '16px', padding: '16px', fontSize: '1rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'Inter, sans-serif', boxShadow: '0 4px 20px rgba(196,113,79,0.3)', transition: 'all 0.2s ease' }}
+                onMouseEnter={e => e.currentTarget.style.background='#a35a3a'}
+                onMouseLeave={e => e.currentTarget.style.background='#c4714f'}
+              >Find an activity for {tw} →</button>
+              <button
+                onClick={onDone}
+                style={{ width: '100%', background: 'transparent', color: 'rgba(245,239,230,0.45)', border: '1px solid rgba(245,239,230,0.15)', borderRadius: '16px', padding: '15px', fontSize: '0.95rem', fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter, sans-serif', transition: 'all 0.2s ease' }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor='rgba(245,239,230,0.35)'; e.currentTarget.style.color='rgba(245,239,230,0.75)'; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor='rgba(245,239,230,0.15)'; e.currentTarget.style.color='rgba(245,239,230,0.45)'; }}
+              >Go to Journal</button>
+            </div>
+          </div>
+        );
+      }
+
       // ── Check-in screens ──────────────────────────
       if (step === 0) return renderPhaseOneQ("How's your body feeling right now?", Q1_OPTIONS, handleEnergySelect, 0);
-      if (step === 1) return renderPhaseOneQ("How's your head tonight?", Q2_OPTIONS, handleMentalSelect, 1);
+      if (step === 1) return renderPhaseOneQ(`How's your head ${getTimeWord()}?`, Q2_OPTIONS, handleMentalSelect, 1);
       if (step === 2) return renderPhaseOneQ("What emotion is closest right now?", Q3_OPTIONS, handleEmotionSelect, 2);
       if (step === 3) return renderPhaseOneQ("How intense does everything feel right now?", Q4_OPTIONS, handleStressSelect, 3);
 
@@ -2008,7 +2074,7 @@
       if (showClosing) return (
         <div className="fade-in flex flex-col items-center justify-center px-5 text-center" style={{ maxWidth: '480px', width: '100%', minHeight: 'calc(100vh - 56px)', paddingTop: '40px', paddingBottom: '48px' }}>
           <h2 className="font-serif text-cream" style={{ fontSize: 'clamp(1.6rem, 6vw, 2.2rem)', fontWeight: 600, marginBottom: '12px' }}>
-            That's yours for tonight.
+            That's yours for {getTimeWord()}.
           </h2>
           <p className="font-serif" style={{ color: 'rgba(245,239,230,0.5)', fontSize: '1rem', fontStyle: 'italic', marginBottom: '32px' }}>
             Anything else you want to add?
@@ -2037,7 +2103,7 @@
         <div className="fade-in flex flex-col items-center justify-center px-6 text-center" style={{ maxWidth: '480px', width: '100%', minHeight: 'calc(100vh - 56px)', paddingTop: '32px', paddingBottom: '48px' }}>
           <button onClick={goBack} style={{ alignSelf: 'flex-start', background: 'none', border: 'none', color: 'rgba(245,239,230,0.4)', fontSize: '0.88rem', cursor: 'pointer', marginBottom: '32px', padding: 0, fontFamily: 'Inter, sans-serif' }}>← Back</button>
           <p className="font-serif text-cream" style={{ fontSize: 'clamp(1.4rem, 5vw, 1.8rem)', fontStyle: 'italic', fontWeight: 500, marginBottom: '14px', lineHeight: 1.45 }}>
-            Want to go a bit deeper tonight?
+            Want to go a bit deeper {getTimeWord()}?
           </p>
           <p style={{ color: 'rgba(245,239,230,0.42)', fontSize: '0.95rem', fontFamily: 'Inter, sans-serif', marginBottom: '40px', lineHeight: 1.6 }}>
             A couple of questions to go beneath the surface.
@@ -2178,6 +2244,7 @@
       const MONTH_FOCUS_WORDS = ['Rest','Growth','Health','Simplicity','Gratitude','Creativity','Presence','Adventure'];
       const wordPool  = isMonth ? MONTH_FOCUS_WORDS : WEEK_FOCUS_WORDS;
       const emptyInt  = { sentence: '', items: [], focusWords: [] };
+      const mob = window.innerWidth < 768;
 
       const [localInt,  setLocalInt]  = useState(() => loadIntention(intentionKey) || emptyInt);
       const [editMode,  setEditMode]  = useState(false);
@@ -2189,8 +2256,8 @@
       const cardBorder = isMonth ? '1px solid rgba(196,113,79,0.18)' : '1px solid rgba(245,239,230,0.07)';
       const editBorder = isMonth ? '1px solid rgba(196,113,79,0.45)' : '1px solid rgba(245,239,230,0.2)';
 
-      const ghostBtn = { background:'none', border:'1px solid rgba(245,239,230,0.14)', borderRadius:'6px', color:'rgba(245,239,230,0.38)', fontSize:'0.66rem', cursor:'pointer', padding:'3px 8px', fontFamily:'Inter, sans-serif' };
-      const pill     = (active) => ({ padding:'4px 11px', borderRadius:'40px', fontSize:'0.73rem', fontWeight:500, cursor:'pointer', border:'none', background: active ? '#c4714f' : 'rgba(245,239,230,0.08)', color: active ? '#f5efe6' : 'rgba(245,239,230,0.48)', transition:'all 0.15s', fontFamily:'Inter, sans-serif' });
+      const ghostBtn = { background:'none', border:'1px solid rgba(245,239,230,0.14)', borderRadius:'6px', color:'rgba(245,239,230,0.38)', fontSize: mob ? '0.75rem' : '0.66rem', cursor:'pointer', padding: mob ? '5px 10px' : '3px 8px', fontFamily:'Inter, sans-serif', minHeight: mob ? '32px' : 'auto' };
+      const pill = (active) => ({ padding: mob ? '5px 12px' : '4px 11px', borderRadius:'40px', fontSize: mob ? '13px' : '0.73rem', fontWeight:500, cursor:'pointer', border:'none', background: active ? '#c4714f' : 'rgba(245,239,230,0.08)', color: active ? '#f5efe6' : 'rgba(245,239,230,0.48)', transition:'all 0.15s', fontFamily:'Inter, sans-serif', minHeight: mob ? '36px' : 'auto', display:'flex', alignItems:'center' });
 
       function openEdit() {
         setEditForm({ sentence: localInt.sentence||'', items: (localInt.items||[]).map(it=>({...it})), focusWords: [...(localInt.focusWords||[])] });
@@ -2216,9 +2283,9 @@
       }
 
       return (
-        <div style={{ background:cardBg, border: editMode ? editBorder : cardBorder, borderRadius:'14px', padding:'14px 14px 12px', marginBottom:'12px', transition:'border-color 0.2s' }}>
+        <div style={{ background:cardBg, border: editMode ? editBorder : cardBorder, borderRadius:'14px', padding: mob ? '18px' : '14px 14px 12px', marginBottom:'12px', transition:'border-color 0.2s', boxSizing:'border-box' }}>
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'10px' }}>
-            <span style={{ color:'rgba(245,239,230,0.42)', fontSize:'0.67rem', fontWeight:600, letterSpacing:'0.08em', textTransform:'uppercase', fontFamily:'Inter, sans-serif' }}>{label}</span>
+            <span style={{ color:'rgba(245,239,230,0.42)', fontSize: mob ? '12px' : '0.67rem', fontWeight:600, letterSpacing:'0.08em', textTransform:'uppercase', fontFamily:'Inter, sans-serif' }}>{label}</span>
             {!editMode && <button style={ghostBtn} onClick={openEdit}>Edit</button>}
             {editMode  && <span style={{ color:'rgba(245,239,230,0.28)', fontSize:'0.63rem', fontFamily:'Inter, sans-serif' }}>editing</span>}
           </div>
@@ -2228,61 +2295,73 @@
               <textarea value={editForm.sentence} onChange={e=>setEditForm(f=>({...f,sentence:e.target.value}))}
                 placeholder={isMonth ? "What do you want this month to hold?" : "What do you want this week to feel like?"}
                 rows={2} autoFocus
-                style={{ width:'100%', boxSizing:'border-box', background:'rgba(245,239,230,0.06)', border:'1px solid rgba(245,239,230,0.14)', borderRadius:'8px', padding:'8px 10px', color:'#f5efe6', fontSize:'0.8rem', lineHeight:1.55, resize:'none', outline:'none', fontFamily:'Inter, sans-serif', marginBottom:'10px' }}
+                style={{ width:'100%', boxSizing:'border-box', background:'rgba(245,239,230,0.06)', border:'1px solid rgba(245,239,230,0.14)', borderRadius:'8px', padding: mob ? '10px 12px' : '8px 10px', color:'#f5efe6', fontSize: mob ? '15px' : '0.8rem', lineHeight:1.6, resize:'none', outline:'none', fontFamily:'Inter, sans-serif', marginBottom:'10px', minHeight: mob ? '80px' : 'auto' }}
               />
               {editForm.items.length > 0 && (
-                <div style={{ display:'flex', flexDirection:'column', gap:'4px', marginBottom:'7px' }}>
+                <div style={{ display:'flex', flexDirection:'column', gap: mob ? '2px' : '4px', marginBottom:'7px' }}>
                   {editForm.items.map((item,i) => (
-                    <div key={i} style={{ display:'flex', alignItems:'center', gap:'6px' }}>
-                      <span style={{ flex:1, color:'rgba(245,239,230,0.6)', fontSize:'0.78rem', fontFamily:'Inter, sans-serif' }}>{item.text}</span>
-                      <button onClick={()=>setEditForm(f=>({...f,items:f.items.filter((_,j)=>j!==i)}))} style={{ background:'none', border:'none', color:'rgba(245,239,230,0.25)', cursor:'pointer', fontSize:'0.9rem', padding:'0 3px', lineHeight:1 }}>×</button>
+                    <div key={i} style={{ display:'flex', alignItems:'center', gap: mob ? '12px' : '6px', minHeight: mob ? '44px' : 'auto', width:'100%' }}>
+                      <span style={{ flex:1, color:'rgba(245,239,230,0.6)', fontSize: mob ? '14px' : '0.78rem', fontFamily:'Inter, sans-serif', lineHeight:1.6 }}>{item.text}</span>
+                      <button onClick={()=>setEditForm(f=>({...f,items:f.items.filter((_,j)=>j!==i)}))}
+                        style={{ background:'none', border:'none', color:'rgba(245,239,230,0.35)', cursor:'pointer', fontSize: mob ? '1.2rem' : '0.9rem', padding:'0', lineHeight:1, flexShrink:0, minWidth: mob ? '44px' : 'auto', minHeight: mob ? '44px' : 'auto', display:'flex', alignItems:'center', justifyContent:'flex-end' }}>×</button>
                     </div>
                   ))}
                 </div>
               )}
-              <div style={{ display:'flex', gap:'5px', marginBottom:'10px' }}>
+              <div style={{ display:'flex', gap: mob ? '10px' : '5px', marginBottom:'10px', alignItems:'center', width:'100%' }}>
                 <input value={itemInput} onChange={e=>setItemInput(e.target.value)}
                   onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();addItem();}}}
                   placeholder="Add intention..."
-                  style={{ flex:1, background:'rgba(245,239,230,0.05)', border:'1px solid rgba(245,239,230,0.1)', borderRadius:'6px', padding:'5px 8px', color:'#f5efe6', fontSize:'0.77rem', outline:'none', fontFamily:'Inter, sans-serif' }}
+                  style={{ flex:1, background:'rgba(245,239,230,0.05)', border:'1px solid rgba(245,239,230,0.1)', borderRadius: mob ? '8px' : '6px', padding: mob ? '10px 12px' : '5px 8px', color:'#f5efe6', fontSize: mob ? '14px' : '0.77rem', outline:'none', fontFamily:'Inter, sans-serif', minWidth:0 }}
                 />
-                <button onClick={addItem} style={{ background:'rgba(245,239,230,0.07)', border:'none', borderRadius:'6px', color:'#f5efe6', width:'26px', cursor:'pointer', fontSize:'1rem', flexShrink:0 }}>+</button>
+                <button onClick={addItem}
+                  style={{ background:'rgba(245,239,230,0.07)', border:'none', borderRadius: mob ? '8px' : '6px', color:'#f5efe6', flexShrink:0, cursor:'pointer', fontSize:'1.1rem', minWidth: mob ? '44px' : '26px', minHeight: mob ? '44px' : 'auto', display:'flex', alignItems:'center', justifyContent:'center' }}>+</button>
               </div>
-              <div style={{ display:'flex', gap:'4px', flexWrap:'wrap', marginBottom:'12px' }}>
+              <div style={{ display:'flex', gap: mob ? '8px' : '4px', flexWrap:'wrap', marginBottom:'12px' }}>
                 {wordPool.map(w => <button key={w} onClick={()=>setEditForm(f=>({...f,focusWords:f.focusWords.includes(w)?f.focusWords.filter(x=>x!==w):[...f.focusWords,w]}))} style={pill(editForm.focusWords.includes(w))}>{w}</button>)}
               </div>
-              <div style={{ display:'flex', gap:'7px' }}>
-                <button onClick={saveEdit}
-                  style={{ flex:1, background:'#c4714f', color:'#f5efe6', border:'none', borderRadius:'8px', padding:'8px', fontSize:'0.76rem', fontWeight:600, cursor:'pointer', fontFamily:'Inter, sans-serif', transition:'background 0.2s' }}
-                  onMouseEnter={e=>e.currentTarget.style.background='#a35a3a'} onMouseLeave={e=>e.currentTarget.style.background='#c4714f'}>Save</button>
-                <button onClick={cancelEdit}
-                  style={{ flex:1, background:'transparent', color:'rgba(245,239,230,0.45)', border:'1px solid rgba(245,239,230,0.12)', borderRadius:'8px', padding:'8px', fontSize:'0.76rem', cursor:'pointer', fontFamily:'Inter, sans-serif' }}>Cancel</button>
-              </div>
+              {mob ? (
+                <div style={{ display:'flex', flexDirection:'column', gap:'8px' }}>
+                  <button onClick={saveEdit}
+                    style={{ width:'100%', background:'#c4714f', color:'#f5efe6', border:'none', borderRadius:'10px', padding:'0', fontSize:'0.9rem', fontWeight:600, cursor:'pointer', fontFamily:'Inter, sans-serif', transition:'background 0.2s', minHeight:'48px' }}
+                    onMouseEnter={e=>e.currentTarget.style.background='#a35a3a'} onMouseLeave={e=>e.currentTarget.style.background='#c4714f'}>Save</button>
+                  <button onClick={cancelEdit}
+                    style={{ width:'100%', background:'transparent', color:'rgba(245,239,230,0.45)', border:'1px solid rgba(245,239,230,0.12)', borderRadius:'10px', padding:'0', fontSize:'0.9rem', cursor:'pointer', fontFamily:'Inter, sans-serif', minHeight:'48px' }}>Cancel</button>
+                </div>
+              ) : (
+                <div style={{ display:'flex', gap:'7px' }}>
+                  <button onClick={saveEdit}
+                    style={{ flex:1, background:'#c4714f', color:'#f5efe6', border:'none', borderRadius:'8px', padding:'8px', fontSize:'0.76rem', fontWeight:600, cursor:'pointer', fontFamily:'Inter, sans-serif', transition:'background 0.2s' }}
+                    onMouseEnter={e=>e.currentTarget.style.background='#a35a3a'} onMouseLeave={e=>e.currentTarget.style.background='#c4714f'}>Save</button>
+                  <button onClick={cancelEdit}
+                    style={{ flex:1, background:'transparent', color:'rgba(245,239,230,0.45)', border:'1px solid rgba(245,239,230,0.12)', borderRadius:'8px', padding:'8px', fontSize:'0.76rem', cursor:'pointer', fontFamily:'Inter, sans-serif' }}>Cancel</button>
+                </div>
+              )}
             </div>
           ) : (
             <>
               {!hasContent ? (
-                <p style={{ color:'rgba(245,239,230,0.22)', fontSize:'0.8rem', fontStyle:'italic', fontFamily:'Lora, serif', lineHeight:1.5 }}>No intention set yet.</p>
+                <p style={{ color:'rgba(245,239,230,0.22)', fontSize: mob ? '14px' : '0.8rem', fontStyle:'italic', fontFamily:'Lora, serif', lineHeight:1.6 }}>No intention set yet.</p>
               ) : (
                 <>
                   {localInt.sentence && (
-                    <p className="font-serif" style={{ color:'rgba(245,239,230,0.72)', fontSize:'0.83rem', fontStyle:'italic', lineHeight:1.55, marginBottom:(localInt.items.length>0||localInt.focusWords.length>0)?'10px':'0' }}>"{localInt.sentence}"</p>
+                    <p className="font-serif" style={{ color:'rgba(245,239,230,0.72)', fontSize: mob ? '15px' : '0.83rem', fontStyle:'italic', lineHeight:1.6, marginBottom:(localInt.items.length>0||localInt.focusWords.length>0)?'10px':'0' }}>"{localInt.sentence}"</p>
                   )}
                   {localInt.items.length > 0 && (
-                    <div style={{ display:'flex', flexDirection:'column', gap:'6px', marginBottom:localInt.focusWords.length>0?'10px':'0' }}>
+                    <div style={{ display:'flex', flexDirection:'column', gap: mob ? '0' : '6px', marginBottom:localInt.focusWords.length>0?'10px':'0' }}>
                       {localInt.items.map((item,i) => (
-                        <div key={i} onClick={()=>toggleItem(i)} style={{ display:'flex', alignItems:'flex-start', gap:'8px', cursor:'pointer' }}>
-                          <div style={{ width:'15px', height:'15px', borderRadius:'50%', flexShrink:0, marginTop:'1px', border:item.checked?'none':'1.5px solid rgba(245,239,230,0.28)', background:item.checked?'#c4714f':'transparent', display:'flex', alignItems:'center', justifyContent:'center', transition:'all 0.15s' }}>
-                            {item.checked && <span style={{ color:'#f5efe6', fontSize:'8px', lineHeight:1 }}>✓</span>}
+                        <div key={i} onClick={()=>toggleItem(i)} style={{ display:'flex', alignItems:'center', gap: mob ? '12px' : '8px', cursor:'pointer', width:'100%', minHeight: mob ? '44px' : 'auto' }}>
+                          <div style={{ width: mob ? '20px' : '15px', height: mob ? '20px' : '15px', borderRadius:'50%', flexShrink:0, border:item.checked?'none':'1.5px solid rgba(245,239,230,0.28)', background:item.checked?'#c4714f':'transparent', display:'flex', alignItems:'center', justifyContent:'center', transition:'all 0.15s' }}>
+                            {item.checked && <span style={{ color:'#f5efe6', fontSize: mob ? '10px' : '8px', lineHeight:1 }}>✓</span>}
                           </div>
-                          <span style={{ color:item.checked?'rgba(245,239,230,0.28)':'rgba(245,239,230,0.68)', fontSize:'0.8rem', lineHeight:1.45, textDecoration:item.checked?'line-through':'none', fontFamily:'Inter, sans-serif' }}>{item.text}</span>
+                          <span style={{ color:item.checked?'rgba(245,239,230,0.28)':'rgba(245,239,230,0.68)', fontSize: mob ? '14px' : '0.8rem', lineHeight:1.6, textDecoration:item.checked?'line-through':'none', fontFamily:'Inter, sans-serif' }}>{item.text}</span>
                         </div>
                       ))}
                     </div>
                   )}
                   {localInt.focusWords.length > 0 && (
-                    <div style={{ display:'flex', gap:'4px', flexWrap:'wrap' }}>
-                      {localInt.focusWords.map(w => <span key={w} style={{ background:'rgba(196,113,79,0.2)', color:'#e8987a', borderRadius:'20px', padding:'2px 9px', fontSize:'0.7rem', fontFamily:'Inter, sans-serif' }}>{w}</span>)}
+                    <div style={{ display:'flex', gap: mob ? '8px' : '4px', flexWrap:'wrap' }}>
+                      {localInt.focusWords.map(w => <span key={w} style={{ background:'rgba(196,113,79,0.2)', color:'#e8987a', borderRadius:'20px', padding: mob ? '5px 12px' : '2px 9px', fontSize: mob ? '13px' : '0.7rem', fontFamily:'Inter, sans-serif', minHeight: mob ? '36px' : 'auto', display:'flex', alignItems:'center' }}>{w}</span>)}
                     </div>
                   )}
                 </>
@@ -2462,8 +2541,8 @@
       const energyLabel = { drained: 'Completely drained', tired: 'Tired but okay', neutral: 'Neutral', good: 'Surprisingly good' };
       const mentalEmoji = { overstimulated: '🌀', foggy: '🌫️', clear: '🙂' };
       const mentalLabel = { overstimulated: 'Overstimulated', foggy: 'Foggy and kind of blank', clear: 'Clear enough' };
-      const emotionEmoji = { anxious: '😬', overwhelmed: '🌊', sad: '😔', irritated: '😤', calm: '😌', good: '🙂' };
-      const emotionLabel = { anxious: 'Anxious', overwhelmed: 'Overwhelmed', sad: 'Sad', irritated: 'Irritated', calm: 'Calm', good: 'Good' };
+      const emotionEmoji = { anxious: '😬', overwhelmed: '🌊', sad: '😔', irritated: '😤', calm: '😌', good: '🙂', hopeful: '💛' };
+      const emotionLabel = { anxious: 'Anxious', overwhelmed: 'Overwhelmed', sad: 'Sad', irritated: 'Irritated', calm: 'Calm', good: 'Good', hopeful: 'Hopeful' };
       const stressEmoji  = { low: '🌿', medium: '🌤️', high: '🔥' };
       const stressLabel  = { low: 'Low intensity', medium: 'Medium intensity', high: 'High intensity' };
 
@@ -2542,19 +2621,22 @@
       const weekStartLabel = weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
       // ── Left/right column helpers ─────────────────
-      // Returns array of { weekKey, label, weekStart } for weeks whose Monday falls in the given year/month
+      // Returns array of { weekKey, label, weekStart } for weeks whose Monday (start) falls in the given year/month
       function getWeeksForMonth(year, month) {
         const weeks = [];
         const seen = new Set();
         const daysInM = new Date(year, month + 1, 0).getDate();
         for (let d = 1; d <= daysInM; d++) {
           const date = new Date(year, month, d);
-          const wk = getWeekKey(date);
-          if (!seen.has(wk)) {
-            seen.add(wk);
-            const ws = getWeekStart(date);
-            const label = ws.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-            weeks.push({ weekKey: wk, label, weekStart: ws });
+          const ws = getWeekStart(date);
+          // Only include this week if its Monday falls within the selected month
+          if (ws.getFullYear() === year && ws.getMonth() === month) {
+            const wk = getWeekKey(ws);
+            if (!seen.has(wk)) {
+              seen.add(wk);
+              const label = ws.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+              weeks.push({ weekKey: wk, label, weekStart: ws });
+            }
           }
         }
         return weeks;
@@ -2845,7 +2927,7 @@
                     </div>
                   ) : (
                     <div style={{ display:'flex', flexDirection:'column', alignItems:'center', padding:'24px 0', opacity:0.28 }}>
-                      <div style={{ fontSize:'1.3rem', marginBottom:'6px' }}>🌙</div>
+                      <div style={{ marginBottom:'6px' }}><CandleFlame width={40} height={52} /></div>
                       <p style={{ color:'#f5efe6', fontFamily:'Inter, sans-serif', fontSize:'0.8rem' }}>Select a day to read that entry.</p>
                     </div>
                   )}
@@ -2867,15 +2949,48 @@
                     onStartReview={() => startReview('month', intMonthKey, loadReviewForKey('month', intMonthKey)?.answers)}
                   />
 
-                  {intWeeks.map(({ weekKey: wk, label }) => (
-                    <IntentionCard
-                      key={`${wk}-${intRefresh}`}
-                      intentionKey={wk}
-                      isMonth={false}
-                      label={`Week of ${label}`}
-                      onStartReview={() => startReview('week', wk, loadReviewForKey('week', wk)?.answers)}
-                    />
-                  ))}
+                  {(() => {
+                    const isCurrentMonth = intNavYear === now.getFullYear() && intNavMonth === now.getMonth();
+                    const currentWeekKey = getWeekKey(now);
+                    if (isCurrentMonth) {
+                      const currentWeek = intWeeks.find(w => w.weekKey === currentWeekKey);
+                      const otherWeeks  = intWeeks.filter(w => w.weekKey !== currentWeekKey);
+                      return (
+                        <>
+                          {currentWeek && (
+                            <IntentionCard
+                              key={`${currentWeek.weekKey}-${intRefresh}`}
+                              intentionKey={currentWeek.weekKey}
+                              isMonth={false}
+                              label={`Week of ${currentWeek.label}`}
+                              onStartReview={() => startReview('week', currentWeek.weekKey, loadReviewForKey('week', currentWeek.weekKey)?.answers)}
+                            />
+                          )}
+                          {currentWeek && otherWeeks.length > 0 && (
+                            <div style={{ height:'0.5px', background:'rgba(245,239,230,0.08)', margin:'0 0 12px' }} />
+                          )}
+                          {otherWeeks.map(({ weekKey: wk, label }) => (
+                            <IntentionCard
+                              key={`${wk}-${intRefresh}`}
+                              intentionKey={wk}
+                              isMonth={false}
+                              label={`Week of ${label}`}
+                              onStartReview={() => startReview('week', wk, loadReviewForKey('week', wk)?.answers)}
+                            />
+                          ))}
+                        </>
+                      );
+                    }
+                    return intWeeks.map(({ weekKey: wk, label }) => (
+                      <IntentionCard
+                        key={`${wk}-${intRefresh}`}
+                        intentionKey={wk}
+                        isMonth={false}
+                        label={`Week of ${label}`}
+                        onStartReview={() => startReview('week', wk, loadReviewForKey('week', wk)?.answers)}
+                      />
+                    ));
+                  })()}
                 </div>
               )}
 
@@ -3154,7 +3269,7 @@
               </div>
             ) : (
               <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'36px 20px', opacity:0.28 }}>
-                <div style={{ fontSize:'1.5rem', marginBottom:'7px' }}>🌙</div>
+                <div style={{ marginBottom:'7px' }}><CandleFlame width={40} height={52} /></div>
                 <p style={{ color:'#f5efe6', fontFamily:'Inter, sans-serif', fontSize:'0.83rem' }}>Select a day to read that entry.</p>
               </div>
             )}
@@ -3307,13 +3422,18 @@
         if (id === 'activities') transition(() => setScreen('activities'));
       }
 
+      function handleFindActivityFromJournal(journalData) {
+        const preAnswers = { energy: journalData.energyLevel, mental: journalData.mentalState };
+        transition(() => { setAnswers(preAnswers); setCurrentQ(2); setScreen('questions'); });
+      }
+
       return (
         <div style={{ minHeight: '100vh', background: '#1a1a2e' }}>
           <TopNav screen={screen} onNav={handleNavClick} />
           <div style={{ paddingTop: '56px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             {fading ? (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 'calc(100vh - 56px)' }}>
-                <div className="pulsing" style={{ fontSize: '1.8rem' }}>🌙</div>
+                <div className="pulsing" style={{ display:'flex', alignItems:'center', justifyContent:'center' }}><CandleFlame width={40} height={52} /></div>
               </div>
             ) : (
               <>
@@ -3358,6 +3478,7 @@
                   <JournalScreen
                     onDone={() => transition(() => setScreen('calendar'))}
                     onBack={() => transition(() => setScreen('today'))}
+                    onFindActivity={handleFindActivityFromJournal}
                   />
                 )}
                 {screen === 'calendar' && (

@@ -19,6 +19,9 @@ const PROMPT_LIBRARY = {
     deep: [
       { text: "What has been building up in me that I haven't had space to process?", tag: "depth" },
       { text: "Where in my life do I feel stretched beyond my limits?",               tag: "boundaries" },
+      { text: "What would it mean to truly rest tonight,\nnot just stop?",            tag: "needs" },
+      { text: "What am I carrying that isn't actually mine?",                         tag: "release" },
+      { text: "If my body could speak right now, what would it ask for?",             tag: "awareness" },
     ],
   },
   foggy: {
@@ -30,6 +33,7 @@ const PROMPT_LIBRARY = {
     deep: [
       { text: "What might I be avoiding by staying in this foggy state?",    tag: "depth" },
       { text: "If I slowed down fully, what thoughts would surface?",        tag: "clarity" },
+      { text: "What decision or conversation have I been\nquietly dreading?", tag: "awareness" },
     ],
   },
   anxiety: {
@@ -39,8 +43,11 @@ const PROMPT_LIBRARY = {
       { text: "What would reassure me a little?",         tag: "needs" },
     ],
     deep: [
-      { text: "What fear is underneath this feeling?",                                tag: "depth" },
-      { text: "When have I felt this before, and what does that tell me?",           tag: "awareness" },
+      { text: "What fear is underneath this feeling?",                                  tag: "depth" },
+      { text: "When have I felt this before, and what does that tell me?",             tag: "awareness" },
+      { text: "What am I trying to control that I actually cannot?",                   tag: "grounding" },
+      { text: "What would I tell a close friend feeling exactly\nthis way right now?", tag: "release" },
+      { text: "What small thing could make me feel 10% safer\nright now?",             tag: "needs" },
     ],
   },
   emotional: {
@@ -50,8 +57,10 @@ const PROMPT_LIBRARY = {
       { text: "What do I need more of emotionally?",           tag: "needs" },
     ],
     deep: [
-      { text: "What is this feeling asking from me?",          tag: "depth" },
-      { text: "What part of me feels unseen or unheard?",      tag: "awareness" },
+      { text: "What is this feeling asking from me?",                                  tag: "depth" },
+      { text: "What part of me feels unseen or unheard?",                             tag: "awareness" },
+      { text: "What have I been silently grieving lately?",                           tag: "depth" },
+      { text: "What would feel like a small act of kindness\ntoward myself tonight?", tag: "needs" },
     ],
   },
   frustrated: {
@@ -61,8 +70,10 @@ const PROMPT_LIBRARY = {
       { text: "What did I hold back from saying?",             tag: "awareness" },
     ],
     deep: [
-      { text: "What boundary might have been crossed?",                          tag: "boundaries" },
-      { text: "What does this frustration reveal about what I need?",            tag: "needs" },
+      { text: "What boundary might have been crossed?",                                       tag: "boundaries" },
+      { text: "What does this frustration reveal about what I need?",                        tag: "needs" },
+      { text: "What expectation — of myself or others —\nis underneath this?",               tag: "awareness" },
+      { text: "What would it feel like to fully let this go,\neven just for tonight?",       tag: "release" },
     ],
   },
   growth: {
@@ -72,8 +83,9 @@ const PROMPT_LIBRARY = {
       { text: "What surprised me in a positive way?",          tag: "reflection" },
     ],
     deep: [
-      { text: "What patterns in my life are working well right now?",            tag: "awareness" },
-      { text: "How can I intentionally create more of this feeling?",            tag: "forward" },
+      { text: "What patterns in my life are working well right now?",                              tag: "awareness" },
+      { text: "What conditions made today feel more aligned —\n and how could I protect more of those?", tag: "forward" },
+      { text: "If I could design more days like this,\n what would they look like?",               tag: "forward" },
     ],
   },
 };
