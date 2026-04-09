@@ -83,9 +83,70 @@
     /* Desktop: hide mobile-only elements */
     .journal-mobile-tabs { display: none; }
     .activity-inline-detail { display: none; }
+
+    /* ── Loading overlay ──────────────────────────── */
+    #loading-overlay { position: fixed; inset: 0; z-index: 9999; transition: opacity 0.6s ease; }
+    .loading-wrap {
+      width: 100%;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 22px;
+      background: #1B2035;
+    }
+    .stars-wrap { position: relative; width: 220px; height: 220px; display: flex; align-items: center; justify-content: center; }
+    .star { position: absolute; border-radius: 50%; background: #FFD700; animation: starTwinkle 2.5s ease-in-out infinite; }
+    .star:nth-child(1)  { width: 6px; height: 6px; top: 8px;     left: 20px;   animation-delay: 0s;   }
+    .star:nth-child(2)  { width: 4px; height: 4px; top: 18px;    right: 22px;  animation-delay: 0.4s; }
+    .star:nth-child(3)  { width: 3px; height: 3px; top: 4px;     right: 44px;  animation-delay: 0.9s; }
+    .star:nth-child(4)  { width: 7px; height: 7px; top: 30px;    left: 8px;    animation-delay: 0.2s; }
+    .star:nth-child(5)  { width: 3px; height: 3px; top: 50px;    right: 6px;   animation-delay: 1.3s; }
+    .star:nth-child(6)  { width: 4px; height: 4px; top: 10px;    left: 60px;   animation-delay: 1.7s; }
+    .star:nth-child(7)  { width: 6px; height: 6px; bottom: 30px; left: 12px;   animation-delay: 0.6s; }
+    .star:nth-child(8)  { width: 3px; height: 3px; bottom: 14px; right: 28px;  animation-delay: 1.1s; }
+    .star:nth-child(9)  { width: 7px; height: 7px; bottom: 20px; right: 10px;  animation-delay: 0.3s; }
+    .star:nth-child(10) { width: 3px; height: 3px; top: 68px;    left: 2px;    animation-delay: 2s;   }
+    .star:nth-child(11) { width: 4px; height: 4px; bottom: 50px; right: 2px;   animation-delay: 1.5s; }
+    .star:nth-child(12) { width: 3px; height: 3px; top: 2px;     right: 70px;  animation-delay: 0.8s; }
+    @keyframes starTwinkle { 0%, 100% { opacity: 0.15; transform: scale(0.6); } 50% { opacity: 1; transform: scale(1.4); } }
+    .moon-emoji { font-size: 80px; animation: moonFloat 4s ease-in-out infinite; position: relative; z-index: 2; line-height: 1; }
+    @keyframes moonFloat { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-14px); } }
+    .app-name { font-size: 40px; color: #F5F2EC; letter-spacing: 0.22em; animation: nameFade 4s ease-in-out infinite; font-weight: normal; font-family: Lora, Georgia, serif; }
+    .tagline { font-size: 16px; color: #9BA8C0; font-style: italic; letter-spacing: 0.07em; animation: nameFade 4s ease-in-out infinite; animation-delay: 0.5s; font-family: Inter, system-ui, sans-serif; }
+    @keyframes nameFade { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
+    .breath-bar-wrap { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 12px; }
+    .breath-label { font-size: 16px; color: #9BA8C0; letter-spacing: 0.18em; text-transform: uppercase; animation: nameFade 4s ease-in-out infinite; font-family: Inter, system-ui, sans-serif; }
+    .breath-bar { width: 120px; height: 4px; background: #2A3250; border-radius: 4px; overflow: hidden; }
+    .breath-fill { height: 100%; background: #C4855A; border-radius: 4px; animation: breathExpand 4s ease-in-out infinite; width: 0%; }
+    @keyframes breathExpand { 0% { width: 0%; opacity: 0.4; } 45% { width: 100%; opacity: 1; } 55% { width: 100%; opacity: 1; } 100% { width: 0%; opacity: 0.4; } }
   </style>
 </head>
 <body>
+  <div id="loading-overlay" class="loading-wrap">
+    <div class="stars-wrap">
+      <div class="star"></div>
+      <div class="star"></div>
+      <div class="star"></div>
+      <div class="star"></div>
+      <div class="star"></div>
+      <div class="star"></div>
+      <div class="star"></div>
+      <div class="star"></div>
+      <div class="star"></div>
+      <div class="star"></div>
+      <div class="star"></div>
+      <div class="star"></div>
+      <div class="moon-emoji">🌙</div>
+    </div>
+    <div class="app-name">unwind</div>
+    <div class="tagline">take a moment. it's just for you.</div>
+    <div class="breath-bar-wrap">
+      <div class="breath-label">breathe</div>
+      <div class="breath-bar"><div class="breath-fill"></div></div>
+    </div>
+  </div>
   <div id="root"></div>
 
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -497,7 +558,7 @@
         default: "Your body carried a lot today. Give it the gentle release it's been waiting for.",
       },
       bath: {
-        drained: "You're running on empty. Warm water and zero demands is exactly the right prescription tonight.",
+        drained: "You're running on empty. Warm water and zero demands is exactly the right prescription today.",
         overstimulated: "Hot water has a way of dissolving thoughts that have been running too fast.",
         default: "A bath with something good in your ears hits different when you actually need it.",
       },
@@ -534,7 +595,7 @@
         default: "Disappearing into a book is one of the oldest forms of rest.",
       },
       documentary: {
-        clear: "You have the headspace to actually absorb something interesting tonight.",
+        clear: "You have the headspace to actually absorb something interesting today.",
         foggy: "A good documentary does all the work — you just follow along.",
         together: "Watching something real and interesting together is quietly good for a relationship.",
         default: "You'll finish it feeling like you actually went somewhere.",
@@ -549,7 +610,7 @@
         default: "No rules, no goal — just the quiet pleasure of putting marks on paper.",
       },
       learn: {
-        clear: "You have the clarity tonight to actually absorb something and enjoy it.",
+        clear: "You have the clarity today to actually absorb something and enjoy it.",
         good: "You have the energy for it, and your brain will thank you.",
         default: "A tiny bit of intentional learning for yourself — not work, not parenting. Just you.",
       },
@@ -566,12 +627,12 @@
       },
       write: {
         overstimulated: "Writing slows the noise down. Getting things out of your head and onto the page actually works.",
-        clear: "You have the clarity tonight to write something real — maybe something you'll want to keep.",
+        clear: "You have the clarity today to write something real — maybe something you'll want to keep.",
         default: "Writing for yourself — no audience, no purpose — is quietly restorative.",
       },
       nonfiction: {
         clear: "Your head is clear enough to actually absorb something and enjoy it.",
-        good: "You have the energy tonight to actually retain what you read.",
+        good: "You have the energy today to actually retain what you read.",
         default: "One chapter of something genuinely interesting feels like a gift to yourself.",
       },
       interview: {
@@ -583,8 +644,8 @@
     function generateWhy(activity, answers) {
       const { energy, mental, social } = answers;
       const m = WHY_MAP[activity.id];
-      if (!m) return "This feels right for where you are tonight.";
-      return m[mental] || m[energy] || m[social] || m['default'] || "This feels right for where you are tonight.";
+      if (!m) return "This feels right for where you are today.";
+      return m[mental] || m[energy] || m[social] || m['default'] || "This feels right for where you are today.";
     }
 
     // ─────────────────────────────────────────────
@@ -722,12 +783,12 @@
         light: [
           { text: "What feels like too much right now?",         tag: "release" },
           { text: "What drained me the most today?",             tag: "reflection" },
-          { text: "What would feel like enough for tonight?",    tag: "needs" },
+          { text: "What would feel like enough for today?",      tag: "needs" },
         ],
         deep: [
           { text: "What has been building up in me that I haven't had space to process?", tag: "depth" },
           { text: "Where in my life do I feel stretched beyond my limits?",               tag: "boundaries" },
-          { text: "What would it mean to truly rest tonight,\nnot just stop?",            tag: "needs" },
+          { text: "What would it mean to truly rest today,\nnot just stop?",              tag: "needs" },
           { text: "What am I carrying that isn't actually mine?",                         tag: "release" },
           { text: "If my body could speak right now, what would it ask for?",             tag: "awareness" },
         ],
@@ -768,7 +829,7 @@
           { text: "What is this feeling asking from me?",                                   tag: "depth" },
           { text: "What part of me feels unseen or unheard?",                              tag: "awareness" },
           { text: "What have I been silently grieving lately?",                            tag: "depth" },
-          { text: "What would feel like a small act of kindness\ntoward myself tonight?",  tag: "needs" },
+          { text: "What would feel like a small act of kindness\ntoward myself today?",    tag: "needs" },
         ],
       },
       frustrated: {
@@ -781,7 +842,7 @@
           { text: "What boundary might have been crossed?",                                          tag: "boundaries" },
           { text: "What does this frustration reveal about what I need?",                           tag: "needs" },
           { text: "What expectation — of myself or others —\nis underneath this?",                  tag: "awareness" },
-          { text: "What would it feel like to fully let this go,\neven just for tonight?",          tag: "release" },
+          { text: "What would it feel like to fully let this go,\neven just for today?",            tag: "release" },
         ],
       },
       growth: {
@@ -815,12 +876,68 @@
       return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
     }
 
-    function loadJournalEntry(dateStr) {
-      try { const s = localStorage.getItem(`journal_${dateStr}`); return s ? JSON.parse(s) : null; } catch { return null; }
+    // ── Array-based journal storage (multiple entries per day) ──
+    function loadJournalEntries(dateStr) {
+      try {
+        const s = localStorage.getItem(`journal_${dateStr}`);
+        if (!s) return [];
+        const parsed = JSON.parse(s);
+        // Migration: single object → wrap in array
+        if (!Array.isArray(parsed)) {
+          return [{ id: parsed.id || dateStr, createdAt: parsed.createdAt || (dateStr + 'T20:00:00.000Z'), flowType: parsed.flowType || 'checkin', ...parsed }];
+        }
+        return parsed;
+      } catch { return []; }
     }
 
+    function saveJournalEntries(dateStr, entries) {
+      try { localStorage.setItem(`journal_${dateStr}`, JSON.stringify(entries)); } catch {}
+    }
+
+    // Upsert a single entry by its id (autosave-safe)
+    function upsertEntryById(dateStr, id, data) {
+      const entries = loadJournalEntries(dateStr);
+      const idx = entries.findIndex(e => e.id === id);
+      if (idx >= 0) {
+        const updated = [...entries];
+        updated[idx] = { ...entries[idx], ...data };
+        saveJournalEntries(dateStr, updated);
+      } else {
+        saveJournalEntries(dateStr, [...entries, { id, createdAt: new Date().toISOString(), ...data }]);
+      }
+    }
+
+    // Add a brand-new entry (returns the new entry)
+    function addJournalEntry(entry) {
+      const entries = loadJournalEntries(entry.date);
+      const newEntry = { id: Date.now().toString(), createdAt: new Date().toISOString(), ...entry };
+      saveJournalEntries(entry.date, [...entries, newEntry]);
+      return newEntry;
+    }
+
+    // Delete a single entry by id
+    function deleteEntryById(dateStr, id) {
+      const entries = loadJournalEntries(dateStr);
+      saveJournalEntries(dateStr, entries.filter(e => e.id !== id));
+    }
+
+    // Backwards-compat: returns first checkin entry (used for calendar tints, lastEntry scan)
+    function loadJournalEntry(dateStr) {
+      const entries = loadJournalEntries(dateStr);
+      return entries.find(e => e.flowType === 'checkin' || !e.flowType) || entries[0] || null;
+    }
+
+    // Backwards-compat: upsert by matching checkin entry (used by App to write recommendedActivity)
     function saveJournalEntry(entry) {
-      try { localStorage.setItem(`journal_${entry.date}`, JSON.stringify(entry)); } catch {}
+      const entries = loadJournalEntries(entry.date);
+      const idx = entries.findIndex(e => e.flowType === 'checkin' || !e.flowType);
+      if (idx >= 0) {
+        const updated = [...entries];
+        updated[idx] = { ...entries[idx], ...entry };
+        saveJournalEntries(entry.date, updated);
+      } else {
+        saveJournalEntries(entry.date, [...entries, { id: Date.now().toString(), createdAt: new Date().toISOString(), ...entry }]);
+      }
     }
 
     function shuffleArr(arr) {
@@ -956,7 +1073,7 @@
       const now = new Date();
       const dateStr = now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 
-      const isHome       = ['today','questions','results'].includes(screen);
+      const isHome       = ['today','questions','results','flowSelector','emotionalFlow'].includes(screen);
       const isJournal    = screen === 'calendar';
       const isActivities = screen === 'activities';
 
@@ -1007,10 +1124,11 @@
       const today = todayStr();
       const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
-      const [todayEntry,    setTodayEntry]    = useState(() => loadJournalEntry(today));
-      const [editMode,      setEditMode]      = useState(false);
-      const [editData,      setEditData]      = useState(null);
-      const [deleteConfirm, setDeleteConfirm] = useState(false);
+      const [entries,        setEntries]        = useState(() => loadJournalEntries(today));
+      const [expandedId,     setExpandedId]     = useState(null);
+      const [editingId,      setEditingId]      = useState(null);
+      const [editData,       setEditData]       = useState(null);
+      const [deleteConfirm,  setDeleteConfirm]  = useState(null); // holds id of entry pending delete
 
       const hour  = now.getHours();
       const greet = hour < 5 ? 'Still up?' : hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
@@ -1030,33 +1148,160 @@
       const stressLabel  = { low:'Low intensity', medium:'Medium intensity', high:'High intensity' };
       const ENERGY_TINTS = { good:{bg:'#D6ECD2',text:'#2E6B27'}, neutral:{bg:'#FAE8D0',text:'#854F0B'}, tired:{bg:'#FAE8D0',text:'#854F0B'}, drained:{bg:'#F5DDD8',text:'#712B13'} };
 
-      function enterEditMode() {
-        setEditData({
-          energyLevel: todayEntry.energyLevel || '',
-          mentalState: todayEntry.mentalState || '',
-          prompts: (todayEntry.prompts || []).map(p => ({ ...p })),
-          notes: todayEntry.notes || '',
-        });
-        setEditMode(true);
-        setDeleteConfirm(false);
+      function reload() { setEntries(loadJournalEntries(today)); }
+
+      function enterEdit(entry) {
+        setEditData({ energyLevel: entry.energyLevel||'', mentalState: entry.mentalState||'', prompts: (entry.prompts||[]).map(p=>({...p})), notes: entry.notes||'' });
+        setEditingId(entry.id);
+        setDeleteConfirm(null);
       }
 
-      function handleSaveEdit() {
-        if (!editData || !todayEntry) return;
-        const updated = { ...todayEntry, ...editData };
-        try { localStorage.setItem(`journal_${today}`, JSON.stringify(updated)); } catch {}
-        setTodayEntry(updated);
-        setEditMode(false);
-        setEditData(null);
+      function handleSaveEdit(entry) {
+        if (!editData) return;
+        upsertEntryById(today, entry.id, { ...entry, ...editData });
+        reload(); setEditingId(null); setEditData(null);
       }
 
-      function handleDelete() {
-        if (!deleteConfirm) { setDeleteConfirm(true); return; }
-        try { localStorage.removeItem(`journal_${today}`); } catch {}
-        setTodayEntry(null);
-        setDeleteConfirm(false);
-        setEditMode(false);
-        setEditData(null);
+      function handleDelete(id) {
+        if (deleteConfirm !== id) { setDeleteConfirm(id); return; }
+        deleteEntryById(today, id);
+        reload(); setDeleteConfirm(null); setEditingId(null); setEditData(null);
+        if (expandedId === id) setExpandedId(null);
+      }
+
+      function entryTime(entry) {
+        if (!entry.createdAt) return '';
+        try { return new Date(entry.createdAt).toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit', hour12:true }).toLowerCase(); } catch { return ''; }
+      }
+
+      function entryPreview(entry) {
+        if (entry.flowType === 'emotional') {
+          const flow = entry.emotionalFlow || [];
+          return flow[0]?.answer || '';
+        }
+        return (entry.prompts || [])[0]?.answer || '';
+      }
+
+      function renderEntryCard(entry) {
+        const id       = entry.id;
+        const expanded = expandedId === id;
+        const editing  = editingId === id;
+        const isCheckin = entry.flowType !== 'emotional';
+        const flowLabel = isCheckin ? 'Check in' : 'Explore a feeling';
+        const preview   = entryPreview(entry);
+        const time      = entryTime(entry);
+
+        return (
+          <div key={id} style={{ background:'rgba(245,239,230,0.05)', border:`1px solid ${expanded?'rgba(196,113,79,0.3)':'rgba(245,239,230,0.1)'}`, borderRadius:'16px', marginBottom:'10px', overflow:'hidden', transition:'border-color 0.2s' }}>
+            {/* Collapsed header — always visible */}
+            <div onClick={() => { if (!editing) { setExpandedId(expanded ? null : id); setDeleteConfirm(null); } }}
+              style={{ display:'flex', alignItems:'center', gap:'8px', padding:'14px 16px', cursor:editing?'default':'pointer', userSelect:'none' }}>
+              <span style={{ background:'rgba(196,113,79,0.18)', color:'#e8987a', borderRadius:'20px', padding:'2px 9px', fontSize:'0.68rem', fontWeight:600, fontFamily:'Inter, sans-serif', flexShrink:0 }}>{flowLabel}</span>
+              {time && <span style={{ color:'rgba(245,239,230,0.32)', fontSize:'0.72rem', fontFamily:'Inter, sans-serif', flexShrink:0 }}>{time}</span>}
+              {isCheckin && entry.energyLevel && (() => { const t=ENERGY_TINTS[entry.energyLevel]; return <span style={{ background:t?t.bg:'rgba(245,239,230,0.07)', color:t?t.text:'rgba(245,239,230,0.55)', borderRadius:'20px', padding:'2px 8px', fontSize:'0.68rem', fontFamily:'Inter, sans-serif', flexShrink:0, border:t?`1px solid ${t.text}25`:'' }}>{energyEmoji[entry.energyLevel]}</span>; })()}
+              {isCheckin && entry.emotionTone && <span style={{ background:'rgba(245,239,230,0.06)', color:'rgba(245,239,230,0.55)', borderRadius:'20px', padding:'2px 8px', fontSize:'0.68rem', fontFamily:'Inter, sans-serif', flexShrink:0 }}>{emotionEmoji[entry.emotionTone]}</span>}
+              <span style={{ color:'rgba(245,239,230,0.25)', fontSize:'0.75rem', marginLeft:'auto', flexShrink:0 }}>{expanded ? '∨' : '›'}</span>
+            </div>
+            {/* Preview line (collapsed only) */}
+            {!expanded && !editing && preview && (
+              <p style={{ color:'rgba(245,239,230,0.38)', fontSize:'0.8rem', fontFamily:'Inter, sans-serif', lineHeight:1.5, padding:'0 16px 12px', margin:0, overflow:'hidden', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical' }}>{preview}</p>
+            )}
+            {/* Expanded content */}
+            {expanded && (
+              <div style={{ padding:'0 16px 16px', borderTop:'0.5px solid rgba(245,239,230,0.07)' }} onClick={e=>e.stopPropagation()}>
+                {/* Actions row */}
+                {!editing && (
+                  <div style={{ display:'flex', gap:'10px', alignItems:'center', justifyContent:'flex-end', paddingTop:'10px', marginBottom:'12px' }}>
+                    {deleteConfirm === id ? (
+                      <>
+                        <span style={{ color:'rgba(245,239,230,0.45)', fontSize:'0.74rem', fontFamily:'Inter, sans-serif' }}>Delete?</span>
+                        <button onClick={()=>handleDelete(id)} style={{ background:'none', border:'none', color:'#e8987a', fontSize:'0.74rem', cursor:'pointer', fontFamily:'Inter, sans-serif' }}>Confirm</button>
+                        <button onClick={()=>setDeleteConfirm(null)} style={{ background:'none', border:'none', color:'rgba(245,239,230,0.35)', fontSize:'0.74rem', cursor:'pointer', fontFamily:'Inter, sans-serif' }}>Cancel</button>
+                      </>
+                    ) : (
+                      <>
+                        {isCheckin && <button onClick={()=>enterEdit(entry)} style={{ background:'none', border:'none', color:'rgba(245,239,230,0.35)', fontSize:'0.74rem', cursor:'pointer', fontFamily:'Inter, sans-serif' }}>Edit</button>}
+                        <button onClick={()=>handleDelete(id)} style={{ background:'none', border:'none', color:'rgba(245,239,230,0.22)', fontSize:'0.74rem', cursor:'pointer', fontFamily:'Inter, sans-serif' }}>Delete</button>
+                      </>
+                    )}
+                  </div>
+                )}
+                {/* Edit form (checkin only) */}
+                {editing && editData && (
+                  <div style={{ paddingTop:'10px' }}>
+                    <p style={{ color:'rgba(245,239,230,0.42)', fontSize:'0.7rem', fontFamily:'Inter, sans-serif', marginBottom:'6px', textTransform:'uppercase', letterSpacing:'0.06em' }}>Body</p>
+                    <div style={{ display:'flex', flexDirection:'column', gap:'5px', marginBottom:'12px' }}>
+                      {[{value:'drained',emoji:'🪫',label:'Completely drained'},{value:'tired',emoji:'😴',label:'Tired but okay'},{value:'neutral',emoji:'😐',label:'Neutral'},{value:'good',emoji:'✨',label:'Surprisingly good'}].map(opt=>(
+                        <button key={opt.value} onClick={()=>setEditData(d=>({...d,energyLevel:opt.value}))}
+                          style={{ display:'flex', alignItems:'center', gap:'9px', background:editData.energyLevel===opt.value?'rgba(196,113,79,0.18)':'rgba(245,239,230,0.04)', border:editData.energyLevel===opt.value?'1px solid rgba(196,113,79,0.5)':'1px solid rgba(245,239,230,0.1)', borderRadius:'9px', padding:'7px 11px', cursor:'pointer', textAlign:'left', transition:'all 0.15s' }}>
+                          <span style={{ fontSize:'0.9rem' }}>{opt.emoji}</span>
+                          <span style={{ color:editData.energyLevel===opt.value?'#f5efe6':'rgba(245,239,230,0.55)', fontSize:'0.82rem', fontFamily:'Inter, sans-serif' }}>{opt.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                    <p style={{ color:'rgba(245,239,230,0.42)', fontSize:'0.7rem', fontFamily:'Inter, sans-serif', marginBottom:'6px', textTransform:'uppercase', letterSpacing:'0.06em' }}>Head</p>
+                    <div style={{ display:'flex', flexDirection:'column', gap:'5px', marginBottom:'14px' }}>
+                      {[{value:'overstimulated',emoji:'🌀',label:'Overstimulated'},{value:'foggy',emoji:'🌫️',label:'Foggy and kind of blank'},{value:'clear',emoji:'🙂',label:'Clear enough'}].map(opt=>(
+                        <button key={opt.value} onClick={()=>setEditData(d=>({...d,mentalState:opt.value}))}
+                          style={{ display:'flex', alignItems:'center', gap:'9px', background:editData.mentalState===opt.value?'rgba(196,113,79,0.18)':'rgba(245,239,230,0.04)', border:editData.mentalState===opt.value?'1px solid rgba(196,113,79,0.5)':'1px solid rgba(245,239,230,0.1)', borderRadius:'9px', padding:'7px 11px', cursor:'pointer', textAlign:'left', transition:'all 0.15s' }}>
+                          <span style={{ fontSize:'0.9rem' }}>{opt.emoji}</span>
+                          <span style={{ color:editData.mentalState===opt.value?'#f5efe6':'rgba(245,239,230,0.55)', fontSize:'0.82rem', fontFamily:'Inter, sans-serif' }}>{opt.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                    <div style={{ borderTop:'0.5px solid rgba(245,239,230,0.08)', marginBottom:'12px' }} />
+                    <div style={{ display:'flex', flexDirection:'column', gap:'10px', marginBottom:'12px' }}>
+                      {editData.prompts.map((p,i)=>(
+                        <div key={i}>
+                          <p className="font-serif" style={{ color:'rgba(245,239,230,0.45)', fontSize:'0.82rem', fontStyle:'italic', marginBottom:'4px' }}>{p.question}</p>
+                          <textarea value={p.answer} onChange={e=>setEditData(d=>({...d,prompts:d.prompts.map((pr,j)=>j===i?{...pr,answer:e.target.value}:pr)}))}
+                            style={{ width:'100%', boxSizing:'border-box', background:'rgba(245,239,230,0.05)', border:'1px solid rgba(245,239,230,0.1)', borderRadius:'9px', padding:'9px', color:'#f5efe6', fontSize:'0.84rem', lineHeight:1.6, resize:'vertical', outline:'none', minHeight:'60px', fontFamily:'Inter, sans-serif' }} />
+                        </div>
+                      ))}
+                    </div>
+                    <textarea value={editData.notes||''} onChange={e=>setEditData(d=>({...d,notes:e.target.value}))} placeholder="Notes..."
+                      style={{ width:'100%', boxSizing:'border-box', background:'rgba(245,239,230,0.05)', border:'1px solid rgba(245,239,230,0.1)', borderRadius:'9px', padding:'9px', color:'#f5efe6', fontSize:'0.84rem', lineHeight:1.6, resize:'vertical', outline:'none', minHeight:'50px', fontFamily:'Inter, sans-serif', marginBottom:'10px' }} />
+                    <div style={{ display:'flex', gap:'8px' }}>
+                      <button onClick={()=>handleSaveEdit(entry)} style={{ flex:1, background:'#c4714f', color:'#f5efe6', border:'none', borderRadius:'10px', padding:'10px', fontSize:'0.84rem', fontWeight:600, cursor:'pointer', fontFamily:'Inter, sans-serif' }}>Save changes</button>
+                      <button onClick={()=>{setEditingId(null);setEditData(null);}} style={{ flex:1, background:'transparent', color:'rgba(245,239,230,0.5)', border:'1px solid rgba(245,239,230,0.15)', borderRadius:'10px', padding:'10px', fontSize:'0.84rem', cursor:'pointer', fontFamily:'Inter, sans-serif' }}>Cancel</button>
+                    </div>
+                  </div>
+                )}
+                {/* Read-only view */}
+                {!editing && (
+                  <div>
+                    {isCheckin && (entry.energyLevel || entry.mentalState) && (
+                      <div style={{ display:'flex', gap:'6px', flexWrap:'wrap', marginBottom:'10px' }}>
+                        {entry.energyLevel && (() => { const t=ENERGY_TINTS[entry.energyLevel]; return <span style={{ background:t?t.bg:'rgba(245,239,230,0.07)', color:t?t.text:'rgba(245,239,230,0.65)', borderRadius:'20px', padding:'3px 10px', fontSize:'0.75rem', fontFamily:'Inter, sans-serif' }}>{energyEmoji[entry.energyLevel]} {energyLabel[entry.energyLevel]}</span>; })()}
+                        {entry.mentalState && <span style={{ background:'rgba(245,239,230,0.07)', borderRadius:'20px', padding:'3px 10px', fontSize:'0.75rem', color:'rgba(245,239,230,0.55)', fontFamily:'Inter, sans-serif' }}>{mentalEmoji[entry.mentalState]} {mentalLabel[entry.mentalState]}</span>}
+                        {entry.emotionTone && <span style={{ background:'rgba(245,239,230,0.07)', borderRadius:'20px', padding:'3px 10px', fontSize:'0.75rem', color:'rgba(245,239,230,0.55)', fontFamily:'Inter, sans-serif' }}>{emotionEmoji[entry.emotionTone]} {emotionLabel[entry.emotionTone]}</span>}
+                        {entry.stressIntensity && <span style={{ background:'rgba(245,239,230,0.07)', borderRadius:'20px', padding:'3px 10px', fontSize:'0.75rem', color:'rgba(245,239,230,0.55)', fontFamily:'Inter, sans-serif' }}>{stressEmoji[entry.stressIntensity]} {stressLabel[entry.stressIntensity]}</span>}
+                      </div>
+                    )}
+                    {isCheckin && (
+                      <div style={{ display:'flex', flexDirection:'column', gap:'10px' }}>
+                        {(entry.prompts||[]).map((p,i)=>(
+                          <div key={i}>
+                            <p className="font-serif" style={{ color:'rgba(245,239,230,0.45)', fontSize:'0.8rem', fontStyle:'italic', marginBottom:'3px' }}>{p.question}</p>
+                            <p style={{ color:'#f5efe6', fontSize:'0.84rem', lineHeight:1.6, fontFamily:'Inter, sans-serif', whiteSpace:'pre-wrap' }}>{p.answer||<em style={{opacity:0.3}}>No answer written</em>}</p>
+                          </div>
+                        ))}
+                        {entry.notes && (<><div style={{ borderTop:'0.5px solid rgba(245,239,230,0.08)', margin:'10px 0 6px' }} /><p style={{ color:'rgba(245,239,230,0.55)', fontSize:'0.84rem', lineHeight:1.6, fontFamily:'Inter, sans-serif', whiteSpace:'pre-wrap' }}>{entry.notes}</p></>)}
+                      </div>
+                    )}
+                    {!isCheckin && (
+                      <div style={{ display:'flex', flexDirection:'column', gap:'10px' }}>
+                        {(entry.emotionalFlow||[]).map((f,i)=>(
+                          f.answer ? <div key={i}><p style={{ color:'#f5efe6', fontSize:'0.84rem', lineHeight:1.6, fontFamily:'Inter, sans-serif', whiteSpace:'pre-wrap' }}>{f.answer}</p></div> : null
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        );
       }
 
       return (
@@ -1069,110 +1314,24 @@
               <h1 className="font-serif text-cream" style={{ fontSize: 'clamp(1.7rem,5vw,2.1rem)', fontWeight: 600, margin: 0 }}>{greet}.</h1>
             </div>
 
-            {todayEntry ? (
+            {entries.length > 0 ? (
               <>
-                {/* Today's entry card */}
-                <div style={{ background:'rgba(196,113,79,0.07)', border:'1px solid rgba(196,113,79,0.28)', borderRadius:'18px', padding:'20px', marginBottom:'32px' }}>
-                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'14px', gap:'10px' }}>
-                    <span className="font-serif" style={{ color:'#d4a853', fontSize:'0.95rem', fontWeight:600 }}>{hour >= 17 ? "Tonight's" : "Today's"} entry</span>
-                    {editMode ? (
-                      <span style={{ color:'rgba(245,239,230,0.3)', fontSize:'0.72rem', fontFamily:'Inter, sans-serif' }}>editing</span>
-                    ) : deleteConfirm ? (
-                      <div style={{ display:'flex', gap:'8px', alignItems:'center' }}>
-                        <span style={{ color:'rgba(245,239,230,0.45)', fontSize:'0.74rem', fontFamily:'Inter, sans-serif' }}>Delete?</span>
-                        <button onClick={handleDelete} style={{ background:'none', border:'none', color:'#e8987a', fontSize:'0.74rem', cursor:'pointer', fontFamily:'Inter, sans-serif' }}>Confirm</button>
-                        <button onClick={()=>setDeleteConfirm(false)} style={{ background:'none', border:'none', color:'rgba(245,239,230,0.35)', fontSize:'0.74rem', cursor:'pointer', fontFamily:'Inter, sans-serif' }}>Cancel</button>
-                      </div>
-                    ) : (
-                      <div style={{ display:'flex', gap:'10px', alignItems:'center' }}>
-                        <button onClick={enterEditMode} style={{ background:'none', border:'none', color:'rgba(245,239,230,0.35)', fontSize:'0.78rem', cursor:'pointer', fontFamily:'Inter, sans-serif', transition:'color 0.2s' }}
-                          onMouseEnter={e=>e.currentTarget.style.color='rgba(245,239,230,0.75)'} onMouseLeave={e=>e.currentTarget.style.color='rgba(245,239,230,0.35)'}>Edit</button>
-                        <button onClick={handleDelete} style={{ background:'none', border:'none', color:'rgba(245,239,230,0.22)', fontSize:'0.78rem', cursor:'pointer', fontFamily:'Inter, sans-serif', transition:'color 0.2s' }}
-                          onMouseEnter={e=>e.currentTarget.style.color='#e8987a'} onMouseLeave={e=>e.currentTarget.style.color='rgba(245,239,230,0.22)'}>Delete</button>
-                      </div>
-                    )}
-                  </div>
+                {/* Write button always visible when entries exist */}
+                <button onClick={onWrite}
+                  style={{ background:'rgba(196,113,79,0.1)', color:'#e8987a', border:'1px solid rgba(196,113,79,0.25)', borderRadius:'14px', padding:'12px 20px', fontSize:'0.9rem', fontWeight:600, cursor:'pointer', fontFamily:'Inter, sans-serif', transition:'all 0.2s ease', display:'block', width:'100%', marginBottom:'16px' }}
+                  onMouseEnter={e=>{e.currentTarget.style.background='rgba(196,113,79,0.18)';}}
+                  onMouseLeave={e=>{e.currentTarget.style.background='rgba(196,113,79,0.1)';}}
+                >+ Write in Journal</button>
 
-                  {editMode && editData ? (
-                    <div>
-                      <p style={{ color:'rgba(245,239,230,0.42)', fontSize:'0.7rem', fontFamily:'Inter, sans-serif', marginBottom:'6px', textTransform:'uppercase', letterSpacing:'0.06em' }}>Body</p>
-                      <div style={{ display:'flex', flexDirection:'column', gap:'5px', marginBottom:'14px' }}>
-                        {[{value:'drained',emoji:'🪫',label:'Completely drained'},{value:'tired',emoji:'😴',label:'Tired but okay'},{value:'neutral',emoji:'😐',label:'Neutral'},{value:'good',emoji:'✨',label:'Surprisingly good'}].map(opt => (
-                          <button key={opt.value} onClick={()=>setEditData(d=>({...d,energyLevel:opt.value}))}
-                            style={{ display:'flex', alignItems:'center', gap:'9px', background:editData.energyLevel===opt.value?'rgba(196,113,79,0.18)':'rgba(245,239,230,0.04)', border:editData.energyLevel===opt.value?'1px solid rgba(196,113,79,0.5)':'1px solid rgba(245,239,230,0.1)', borderRadius:'9px', padding:'7px 11px', cursor:'pointer', textAlign:'left', transition:'all 0.15s' }}>
-                            <span style={{ fontSize:'0.9rem' }}>{opt.emoji}</span>
-                            <span style={{ color:editData.energyLevel===opt.value?'#f5efe6':'rgba(245,239,230,0.55)', fontSize:'0.82rem', fontFamily:'Inter, sans-serif' }}>{opt.label}</span>
-                          </button>
-                        ))}
-                      </div>
-                      <p style={{ color:'rgba(245,239,230,0.42)', fontSize:'0.7rem', fontFamily:'Inter, sans-serif', marginBottom:'6px', textTransform:'uppercase', letterSpacing:'0.06em' }}>Head</p>
-                      <div style={{ display:'flex', flexDirection:'column', gap:'5px', marginBottom:'16px' }}>
-                        {[{value:'overstimulated',emoji:'🌀',label:'Overstimulated'},{value:'foggy',emoji:'🌫️',label:'Foggy and kind of blank'},{value:'clear',emoji:'🙂',label:'Clear enough'}].map(opt => (
-                          <button key={opt.value} onClick={()=>setEditData(d=>({...d,mentalState:opt.value}))}
-                            style={{ display:'flex', alignItems:'center', gap:'9px', background:editData.mentalState===opt.value?'rgba(196,113,79,0.18)':'rgba(245,239,230,0.04)', border:editData.mentalState===opt.value?'1px solid rgba(196,113,79,0.5)':'1px solid rgba(245,239,230,0.1)', borderRadius:'9px', padding:'7px 11px', cursor:'pointer', textAlign:'left', transition:'all 0.15s' }}>
-                            <span style={{ fontSize:'0.9rem' }}>{opt.emoji}</span>
-                            <span style={{ color:editData.mentalState===opt.value?'#f5efe6':'rgba(245,239,230,0.55)', fontSize:'0.82rem', fontFamily:'Inter, sans-serif' }}>{opt.label}</span>
-                          </button>
-                        ))}
-                      </div>
-                      <div style={{ borderTop:'0.5px solid rgba(245,239,230,0.08)', marginBottom:'14px' }} />
-                      <div style={{ display:'flex', flexDirection:'column', gap:'12px', marginBottom:'14px' }}>
-                        {editData.prompts.map((p,i) => (
-                          <div key={i}>
-                            <p className="font-serif" style={{ color:'rgba(245,239,230,0.45)', fontSize:'0.82rem', fontStyle:'italic', marginBottom:'5px' }}>{p.question}</p>
-                            <textarea value={p.answer} onChange={e=>setEditData(d=>({...d,prompts:d.prompts.map((pr,j)=>j===i?{...pr,answer:e.target.value}:pr)}))}
-                              style={{ width:'100%', boxSizing:'border-box', background:'rgba(245,239,230,0.05)', border:'1px solid rgba(245,239,230,0.1)', borderRadius:'9px', padding:'10px', color:'#f5efe6', fontSize:'0.84rem', lineHeight:1.6, resize:'vertical', outline:'none', minHeight:'70px', fontFamily:'Inter, sans-serif' }} />
-                          </div>
-                        ))}
-                      </div>
-                      <div style={{ marginBottom:'14px' }}>
-                        <p style={{ color:'rgba(245,239,230,0.42)', fontSize:'0.7rem', fontFamily:'Inter, sans-serif', marginBottom:'5px', textTransform:'uppercase', letterSpacing:'0.06em' }}>Notes</p>
-                        <textarea value={editData.notes||''} onChange={e=>setEditData(d=>({...d,notes:e.target.value}))} placeholder="A thought, a moment, anything..."
-                          style={{ width:'100%', boxSizing:'border-box', background:'rgba(245,239,230,0.05)', border:'1px solid rgba(245,239,230,0.1)', borderRadius:'9px', padding:'10px', color:'#f5efe6', fontSize:'0.84rem', lineHeight:1.6, resize:'vertical', outline:'none', minHeight:'60px', fontFamily:'Inter, sans-serif' }} />
-                      </div>
-                      <div style={{ display:'flex', gap:'8px' }}>
-                        <button onClick={handleSaveEdit} style={{ flex:1, background:'#c4714f', color:'#f5efe6', border:'none', borderRadius:'10px', padding:'10px', fontSize:'0.84rem', fontWeight:600, cursor:'pointer', fontFamily:'Inter, sans-serif', transition:'background 0.2s' }}
-                          onMouseEnter={e=>e.currentTarget.style.background='#a35a3a'} onMouseLeave={e=>e.currentTarget.style.background='#c4714f'}>Save changes</button>
-                        <button onClick={()=>{setEditMode(false);setEditData(null);}} style={{ flex:1, background:'transparent', color:'rgba(245,239,230,0.5)', border:'1px solid rgba(245,239,230,0.15)', borderRadius:'10px', padding:'10px', fontSize:'0.84rem', cursor:'pointer', fontFamily:'Inter, sans-serif' }}>Cancel</button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div>
-                      {(todayEntry.energyLevel || todayEntry.mentalState) && (
-                        <div style={{ display:'flex', gap:'6px', flexWrap:'wrap', marginBottom:'12px' }}>
-                          {todayEntry.energyLevel && (() => { const t=ENERGY_TINTS[todayEntry.energyLevel]; return <span style={{ background:t?t.bg:'rgba(245,239,230,0.07)', color:t?t.text:'rgba(245,239,230,0.65)', borderRadius:'20px', padding:'3px 10px', fontSize:'0.76rem', fontFamily:'Inter, sans-serif', border:t?`1px solid ${t.text}30`:'none' }}>{energyEmoji[todayEntry.energyLevel]} {energyLabel[todayEntry.energyLevel]}</span>; })()}
-                          {todayEntry.mentalState && <span style={{ background:'rgba(245,239,230,0.07)', borderRadius:'20px', padding:'3px 10px', fontSize:'0.76rem', color:'rgba(245,239,230,0.6)', fontFamily:'Inter, sans-serif' }}>{mentalEmoji[todayEntry.mentalState]} {mentalLabel[todayEntry.mentalState]}</span>}
-                          {todayEntry.emotionTone && <span style={{ background:'rgba(245,239,230,0.07)', borderRadius:'20px', padding:'3px 10px', fontSize:'0.76rem', color:'rgba(245,239,230,0.6)', fontFamily:'Inter, sans-serif' }}>{emotionEmoji[todayEntry.emotionTone]} {emotionLabel[todayEntry.emotionTone]}</span>}
-                          {todayEntry.stressIntensity && <span style={{ background:'rgba(245,239,230,0.07)', borderRadius:'20px', padding:'3px 10px', fontSize:'0.76rem', color:'rgba(245,239,230,0.6)', fontFamily:'Inter, sans-serif' }}>{stressEmoji[todayEntry.stressIntensity]} {stressLabel[todayEntry.stressIntensity]}</span>}
-                        </div>
-                      )}
-                      <div style={{ borderTop:'0.5px solid rgba(245,239,230,0.08)', marginBottom:'12px' }} />
-                      <div style={{ display:'flex', flexDirection:'column', gap:'12px' }}>
-                        {todayEntry.prompts && todayEntry.prompts.map((p,i) => (
-                          <div key={i}>
-                            <p className="font-serif" style={{ color:'rgba(245,239,230,0.45)', fontSize:'0.82rem', fontStyle:'italic', marginBottom:'3px' }}>{p.question}</p>
-                            <p style={{ color:'#f5efe6', fontSize:'0.86rem', lineHeight:1.6, fontFamily:'Inter, sans-serif', whiteSpace:'pre-wrap' }}>{p.answer || <em style={{ opacity:0.35 }}>No answer written</em>}</p>
-                          </div>
-                        ))}
-                      </div>
-                      {todayEntry.notes && (
-                        <>
-                          <div style={{ borderTop:'0.5px solid rgba(245,239,230,0.08)', margin:'12px 0 8px' }} />
-                          <p style={{ color:'rgba(245,239,230,0.32)', fontSize:'0.67rem', fontWeight:600, letterSpacing:'0.08em', textTransform:'uppercase', fontFamily:'Inter, sans-serif', marginBottom:'4px' }}>Notes</p>
-                          <p style={{ color:'rgba(245,239,230,0.62)', fontSize:'0.84rem', lineHeight:1.6, fontFamily:'Inter, sans-serif', whiteSpace:'pre-wrap' }}>{todayEntry.notes}</p>
-                        </>
-                      )}
-                    </div>
-                  )}
-                </div>
+                {/* Entry cards */}
+                {entries.map(entry => renderEntryCard(entry))}
 
                 {/* Divider + Gentle reminders */}
-                <div style={{ display:'flex', alignItems:'center', gap:'12px', marginBottom:'20px' }}>
+                <div style={{ display:'flex', alignItems:'center', gap:'12px', margin:'24px 0 20px' }}>
                   <div style={{ flex:1, height:'0.5px', background:'rgba(245,239,230,0.08)' }} />
                   <span style={{ color:'rgba(245,239,230,0.28)', fontSize:'0.68rem', fontWeight:600, letterSpacing:'0.1em', textTransform:'uppercase', fontFamily:'Inter, sans-serif', whiteSpace:'nowrap' }}>Gentle reminders</span>
                   <div style={{ flex:1, height:'0.5px', background:'rgba(245,239,230,0.08)' }} />
                 </div>
-
                 <IntentionCard intentionKey={monthKey} isMonth={true}  label={`${MONTH_NAMES[now.getMonth()]} intention`} />
                 <IntentionCard intentionKey={weekKey}  isMonth={false} label={weekLabel} />
               </>
@@ -1196,7 +1355,6 @@
 
                 {/* Divider */}
                 <div style={{ height:'0.5px', background:'rgba(245,239,230,0.08)', marginBottom:'24px' }} />
-
                 <IntentionCard intentionKey={monthKey} isMonth={true}  label={`${MONTH_NAMES[now.getMonth()]} intention`} />
                 <IntentionCard intentionKey={weekKey}  isMonth={false} label={weekLabel} />
               </>
@@ -1819,17 +1977,347 @@
     }
 
     // ─────────────────────────────────────────────
+    //  FLOW SELECTOR SCREEN
+    // ─────────────────────────────────────────────
+    function FlowSelectorScreen({ onCheckin, onEmotional, onBack }) {
+      const cardBase = {
+        display: 'flex', flexDirection: 'column', gap: '6px',
+        background: 'rgba(245,239,230,0.05)', border: '1px solid rgba(245,239,230,0.1)',
+        borderRadius: '18px', padding: '22px 24px', cursor: 'pointer',
+        textAlign: 'left', width: '100%', transition: 'all 0.2s ease',
+        boxSizing: 'border-box',
+      };
+      return (
+        <div className="fade-in" style={{ width: '100%', maxWidth: '480px', paddingTop: '28px', paddingBottom: '48px', paddingLeft: '20px', paddingRight: '20px', boxSizing: 'border-box' }}>
+          <button onClick={onBack} style={{ background: 'none', border: 'none', color: 'rgba(245,239,230,0.4)', fontSize: '0.88rem', cursor: 'pointer', marginBottom: '28px', padding: 0, fontFamily: 'Inter, sans-serif', display: 'block' }}>← Back</button>
+          <h2 className="font-serif text-cream" style={{ fontSize: 'clamp(1.3rem,5vw,1.65rem)', fontWeight: 600, lineHeight: 1.4, marginBottom: '8px' }}>What would you like to do?</h2>
+          <p style={{ color: 'rgba(245,239,230,0.38)', fontSize: '0.88rem', fontFamily: 'Inter, sans-serif', marginBottom: '28px' }}>Choose how you'd like to use this space.</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <button style={cardBase} onClick={onCheckin}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(245,239,230,0.09)'; e.currentTarget.style.borderColor = 'rgba(196,113,79,0.5)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(245,239,230,0.05)'; e.currentTarget.style.borderColor = 'rgba(245,239,230,0.1)'; }}
+            >
+              <span style={{ color: '#f5efe6', fontSize: '1rem', fontWeight: 600, fontFamily: 'Inter, sans-serif' }}>Check in</span>
+              <span style={{ color: 'rgba(245,239,230,0.45)', fontSize: '0.88rem', fontFamily: 'Inter, sans-serif', lineHeight: 1.5 }}>How are you arriving today? A quick daily snapshot.</span>
+            </button>
+            <button style={cardBase} onClick={onEmotional}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(245,239,230,0.09)'; e.currentTarget.style.borderColor = 'rgba(196,113,79,0.5)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(245,239,230,0.05)'; e.currentTarget.style.borderColor = 'rgba(245,239,230,0.1)'; }}
+            >
+              <span style={{ color: '#f5efe6', fontSize: '1rem', fontWeight: 600, fontFamily: 'Inter, sans-serif' }}>Work through a feeling</span>
+              <span style={{ color: 'rgba(245,239,230,0.45)', fontSize: '0.88rem', fontFamily: 'Inter, sans-serif', lineHeight: 1.5 }}>Explore what's on your mind, one question at a time.</span>
+            </button>
+            <div style={{ ...cardBase, cursor: 'default', opacity: 0.5 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span style={{ color: '#f5efe6', fontSize: '1rem', fontWeight: 600, fontFamily: 'Inter, sans-serif' }}>Free write</span>
+                <span style={{ background: 'rgba(245,239,230,0.1)', color: 'rgba(245,239,230,0.55)', borderRadius: '20px', padding: '2px 9px', fontSize: '0.7rem', fontFamily: 'Inter, sans-serif', fontWeight: 600 }}>Coming soon</span>
+              </div>
+              <span style={{ color: 'rgba(245,239,230,0.45)', fontSize: '0.88rem', fontFamily: 'Inter, sans-serif', lineHeight: 1.5 }}>A blank page with a single prompt to get you started.</span>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ─────────────────────────────────────────────
+    //  EMOTIONAL EXPLORATION FLOW
+    // ─────────────────────────────────────────────
+    function EmotionalFlowScreen({ onDone, onBack, onFindActivity }) {
+      const today = todayStr();
+      const [entryId] = useState(() => Date.now().toString());
+      const [step, setStep] = useState(0); // 0=Q1, 1=Q2, 2=Q3, 3=Q4, 4=Q5, 5=closing
+      const [branch, setBranch] = useState(null);
+      const [q2Choice, setQ2Choice] = useState(null);
+      const [answers, setAnswers] = useState({}); // {0: "text", 1: "option", 2: "text", ...}
+      const [savedScreen, setSavedScreen] = useState(false);
+      // Hoisted text state for all free-text steps (Rules of Hooks: no useState in conditionals)
+      const [q1Text, setQ1Text] = useState('');
+      const [q3Text, setQ3Text] = useState('');
+      const [q4Text, setQ4Text] = useState('');
+      const [q5Text, setQ5Text] = useState('');
+
+      function detectBranch(text) {
+        const t = text.toLowerCase();
+        if (/stress|overwhelm|overwhelmed|busy|too much|boiling|spinning|exhausted|pressure/.test(t)) return 'stress';
+        if (/sad|empty|low|numb|lost|grief|hopeless|down|depressed|blue/.test(t)) return 'sad';
+        if (/anxious|anxiety|scared|worried|afraid|dread|nervous|panic|fear/.test(t)) return 'anxious';
+        if (/angry|anger|frustrated|frustration|irritated|resentful|furious|annoyed|rage/.test(t)) return 'anger';
+        if (/lonely|loneliness|invisible|unseen|disconnected|isolated|alone|missing/.test(t)) return 'lonely';
+        return 'default';
+      }
+
+      const Q2_BY_BRANCH = {
+        stress: {
+          q: "When you say that — is it more that there's too much to do, or that you don't know where to start?",
+          opts: ["Too much to do", "Don't know where to start", "Both equally"],
+        },
+        sad: {
+          q: "Is this feeling tied to something specific that happened, or does it feel more like a general heaviness with no clear cause?",
+          opts: ["Something specific happened", "General heaviness", "Not sure"],
+        },
+        anxious: {
+          q: "What's underneath the anxiety — is it about something that might happen, or something you feel you're not handling well enough?",
+          opts: ["Something that might happen", "Not handling something well enough", "Both"],
+        },
+        anger: {
+          q: "Is the frustration pointed at someone specific, at a situation, or at yourself?",
+          opts: ["Someone specific", "A situation", "Myself", "All of it"],
+        },
+        lonely: {
+          q: "Is the loneliness about missing a specific person, or more about feeling unseen in your everyday life?",
+          opts: ["Missing someone specific", "Feeling unseen generally", "Both"],
+        },
+        default: {
+          q: "Is this feeling more physical — something you feel in your body — or more mental, a stream of thoughts you can't quiet?",
+          opts: ["Physical / in my body", "Mental / in my head", "Both"],
+        },
+      };
+
+      function getQ3() {
+        const b = branch; const c = (q2Choice || '').toLowerCase();
+        if (b === 'stress' && c.includes('too much')) return { type: 'text', q: "If you had to set everything down and pick the ONE thing weighing on you the most — not the most urgent, but the heaviest — what would it be?" };
+        if (b === 'stress' && (c.includes("don't know") || c.includes('both'))) return { type: 'options', q: "What does the fog feel like — is it that everything feels equally important, or that nothing feels clear enough to act on?", opts: ["Everything feels equally important", "Nothing feels clear enough", "I'm afraid of choosing wrong"] };
+        if (b === 'sad' && c.includes('specific')) return { type: 'text', q: "Do you want to name what happened? You don't have to, but sometimes just writing it down helps.", skippable: true };
+        if (b === 'sad') return { type: 'options', q: "How long has this been sitting with you?", opts: ["A few days", "A few weeks", "Longer than I want to admit"] };
+        if (b === 'anxious' && c.includes('might happen')) return { type: 'text', q: "What's the worst version of what you're afraid might happen? Say it plainly — naming the fear often shrinks it." };
+        if (b === 'anxious') return { type: 'text', q: "What standard are you holding yourself to that you feel you're falling short of?" };
+        if (b === 'anger' && c.includes('someone')) return { type: 'text', q: "What did they do — or not do — that crossed something important to you?" };
+        if (b === 'anger' && c.includes('situation')) return { type: 'text', q: "What feels most unfair or wrong about it?" };
+        if (b === 'anger' && c.includes('myself')) return { type: 'text', q: "What are you angry at yourself for? Try to say it without softening it." };
+        if (b === 'anger') return { type: 'text', q: "What feels most unfair or wrong about it?" };
+        if (b === 'lonely') return { type: 'text', q: "When did you last feel genuinely connected to someone? What was different then?" };
+        if (b === 'default' && c.includes('physical')) return { type: 'text', q: "Where do you feel it in your body? Chest, shoulders, stomach, throat — somewhere else?" };
+        return { type: 'options', q: "If you had to label this stream of thoughts — worry, regret, planning, replaying — what fits best?", opts: ["Worry about the future", "Replaying the past", "Trying to plan and control", "Comparing myself to others", "Other"] };
+      }
+
+      function getQ4() {
+        const a3 = answers[2] || '';
+        const b = branch;
+        const c = (q2Choice || '').toLowerCase();
+        if (b === 'anger' && c.includes('myself')) return "What would you say to a close friend who was feeling exactly what you just described?";
+        if (a3 && a3.trim().length > 10) return "What does this situation reveal about something you need or value that isn't being met right now?";
+        return "What do you think this feeling is trying to tell you — if it had a message, what would it be?";
+      }
+
+      function getQ5() {
+        if (branch === 'stress')   return "What would it feel like to get the heaviest thing just 10% more done today — not finished, just moved? What would that one step be?";
+        if (branch === 'sad')      return "What would feel like a small act of kindness toward yourself today?";
+        if (branch === 'anxious')  return "What's one thing that is actually okay right now — something solid you can stand on?";
+        if (branch === 'anger')    return "What do you need to let go of today, even temporarily, to give yourself some peace?";
+        if (branch === 'lonely')   return "Is there one small way you could reach toward connection this week — even a tiny one?";
+        return "What would feel like enough for today? Not perfect — just enough.";
+      }
+
+      function getClosingReflection() {
+        if (branch === 'stress') return "You came in feeling overwhelmed, and what surfaced was one thing carrying most of the weight. You already know what would bring relief — you're just waiting for the space to act on it. That clarity matters.";
+        if (branch === 'sad')    return "You came in carrying something heavy today. Naming it, even just here, is its own quiet form of courage.";
+        if (branch === 'anxious') return "You came in with a lot of what-ifs swirling. You can't control everything — but you showed up and looked at it directly. That takes something.";
+        if (branch === 'anger')  return "Something real got crossed today, and you felt it. Feelings like this usually point to something you care about. That's worth knowing.";
+        if (branch === 'lonely') return "Loneliness is one of the quieter hard things. You named it today instead of pushing past it. That's not a small thing.";
+        return "You took a moment to look inward today. Whatever is there — it deserved to be seen. You showed up for yourself.";
+      }
+
+      function autosaveEmotional(stepAnswers, branchOverride) {
+        const flow = Object.entries(stepAnswers).map(([i, a]) => ({ step: Number(i), answer: a }));
+        upsertEntryById(today, entryId, {
+          date: today, flowType: 'emotional',
+          emotionalFlow: flow, emotionalBranch: branchOverride !== undefined ? branchOverride : branch,
+        });
+      }
+
+      function handleQ1(text) {
+        const a = { ...answers, 0: text };
+        setAnswers(a);
+        const b = detectBranch(text);
+        setBranch(b);
+        autosaveEmotional(a, b);
+        setStep(1);
+      }
+
+      function handleQ2Option(opt) {
+        const a = { ...answers, 1: opt };
+        setAnswers(a);
+        setQ2Choice(opt);
+        autosaveEmotional(a);
+        setStep(2);
+      }
+
+      function handleQ3(val) {
+        const a = { ...answers, 2: val };
+        setAnswers(a);
+        autosaveEmotional(a);
+        setStep(3);
+      }
+
+      function handleQ4(text) {
+        const a = { ...answers, 3: text };
+        setAnswers(a);
+        autosaveEmotional(a);
+        setStep(4);
+      }
+
+      function handleQ5(text) {
+        const a = { ...answers, 4: text };
+        setAnswers(a);
+        autosaveEmotional(a);
+        setStep(5);
+      }
+
+      function handleSave() {
+        const flow = Object.entries(answers).map(([i, a]) => ({ step: Number(i), answer: a }));
+        upsertEntryById(today, entryId, {
+          date: today, flowType: 'emotional',
+          emotionalFlow: flow, emotionalBranch: branch,
+        });
+        setSavedScreen(true);
+      }
+
+      const textAreaStyle = { background: 'rgba(245,239,230,0.06)', border: '1px solid rgba(245,239,230,0.12)', borderRadius: '16px', padding: '18px', color: '#f5efe6', fontSize: '1rem', lineHeight: 1.7, resize: 'none', outline: 'none', width: '100%', boxSizing: 'border-box', minHeight: '200px', fontFamily: 'Inter, sans-serif' };
+      const continueBtn = (onClick, label = 'Continue →') => (
+        <button onClick={onClick}
+          style={{ width: '100%', background: '#c4714f', color: '#f5efe6', border: 'none', borderRadius: '16px', padding: '16px', fontSize: '1rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'Inter, sans-serif', boxShadow: '0 4px 20px rgba(196,113,79,0.3)', transition: 'all 0.2s ease', marginTop: '16px' }}
+          onMouseEnter={e => e.currentTarget.style.background='#a35a3a'} onMouseLeave={e => e.currentTarget.style.background='#c4714f'}
+        >{label}</button>
+      );
+      const optionBtn = (label, onClick) => (
+        <button key={label} onClick={onClick}
+          style={{ display: 'flex', alignItems: 'center', background: 'rgba(245,239,230,0.05)', border: '1px solid rgba(245,239,230,0.1)', borderRadius: '16px', padding: '16px 20px', cursor: 'pointer', textAlign: 'left', width: '100%', transition: 'all 0.2s ease', color: '#f5efe6', fontFamily: 'Inter, sans-serif', fontSize: '1rem', fontWeight: 500, marginBottom: '8px' }}
+          onMouseEnter={e => { e.currentTarget.style.background='rgba(245,239,230,0.09)'; e.currentTarget.style.borderColor='rgba(196,113,79,0.5)'; }}
+          onMouseLeave={e => { e.currentTarget.style.background='rgba(245,239,230,0.05)'; e.currentTarget.style.borderColor='rgba(245,239,230,0.1)'; }}
+        >{label}</button>
+      );
+      const totalSteps = 5;
+      const wrapStyle = { width: '100%', maxWidth: '480px', paddingTop: '28px', paddingBottom: '48px', paddingLeft: '20px', paddingRight: '20px', boxSizing: 'border-box' };
+
+      // ── Saved screen
+      if (savedScreen) {
+        const phrase = getSupportivePhrase(null, null, null);
+        const tw = getTimeWord();
+        return (
+          <div className="fade-in flex flex-col items-center justify-center px-5 text-center" style={{ maxWidth: '480px', width: '100%', minHeight: 'calc(100vh - 56px)', paddingTop: '40px', paddingBottom: '48px' }}>
+            <h2 className="font-serif text-cream" style={{ fontSize: 'clamp(1.6rem, 6vw, 2.2rem)', fontWeight: 600, marginBottom: '16px' }}>Saved ✓</h2>
+            <p className="font-serif" style={{ color: 'rgba(245,239,230,0.6)', fontSize: '1rem', fontStyle: 'italic', marginBottom: '12px', lineHeight: 1.65 }}>{getClosingReflection()}</p>
+            <p className="font-serif" style={{ color: 'rgba(245,239,230,0.4)', fontSize: '0.95rem', fontStyle: 'italic', marginBottom: '40px', lineHeight: 1.65 }}>{phrase}</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%' }}>
+              <button onClick={() => onFindActivity && onFindActivity({})}
+                style={{ width: '100%', background: '#c4714f', color: '#f5efe6', border: 'none', borderRadius: '16px', padding: '16px', fontSize: '1rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'Inter, sans-serif', boxShadow: '0 4px 20px rgba(196,113,79,0.3)', transition: 'all 0.2s ease' }}
+                onMouseEnter={e => e.currentTarget.style.background='#a35a3a'} onMouseLeave={e => e.currentTarget.style.background='#c4714f'}
+              >Find an activity for {tw} →</button>
+              <button onClick={onDone}
+                style={{ width: '100%', background: 'transparent', color: 'rgba(245,239,230,0.45)', border: '1px solid rgba(245,239,230,0.15)', borderRadius: '16px', padding: '15px', fontSize: '0.95rem', fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter, sans-serif', transition: 'all 0.2s ease' }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor='rgba(245,239,230,0.35)'; e.currentTarget.style.color='rgba(245,239,230,0.75)'; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor='rgba(245,239,230,0.15)'; e.currentTarget.style.color='rgba(245,239,230,0.45)'; }}
+              >Go to Journal</button>
+            </div>
+          </div>
+        );
+      }
+
+      // ── Closing screen (before save)
+      if (step === 5) {
+        return (
+          <div className="fade-in flex flex-col items-center justify-center px-5 text-center" style={{ maxWidth: '480px', width: '100%', minHeight: 'calc(100vh - 56px)', paddingTop: '40px', paddingBottom: '48px' }}>
+            <p className="font-serif text-cream" style={{ fontSize: 'clamp(1.2rem,5vw,1.55rem)', fontStyle: 'italic', fontWeight: 500, lineHeight: 1.55, marginBottom: '40px' }}>{getClosingReflection()}</p>
+            {continueBtn(handleSave, 'Save & finish')}
+          </div>
+        );
+      }
+
+      // ── Q1
+      if (step === 0) {
+        return (
+          <div className="fade-in" style={wrapStyle}>
+            <button onClick={onBack} style={{ background: 'none', border: 'none', color: 'rgba(245,239,230,0.4)', fontSize: '0.88rem', cursor: 'pointer', marginBottom: '20px', padding: 0, fontFamily: 'Inter, sans-serif', display: 'block' }}>← Back</button>
+            <ProgressDots current={0} total={totalSteps} />
+            <h2 className="font-serif text-cream" style={{ fontSize: 'clamp(1.2rem,5vw,1.5rem)', fontWeight: 500, fontStyle: 'italic', lineHeight: 1.5, marginBottom: '28px' }}>
+              What's the loudest feeling you're carrying right now?
+            </h2>
+            <textarea value={q1Text} onChange={e => setQ1Text(e.target.value)} placeholder="Whatever comes up..." style={textAreaStyle} />
+            {continueBtn(() => { if (q1Text.trim()) handleQ1(q1Text); })}
+          </div>
+        );
+      }
+
+      // ── Q2
+      if (step === 1) {
+        const b2 = branch || 'default';
+        const q2 = Q2_BY_BRANCH[b2];
+        return (
+          <div className="fade-in" style={wrapStyle}>
+            <button onClick={() => setStep(0)} style={{ background: 'none', border: 'none', color: 'rgba(245,239,230,0.4)', fontSize: '0.88rem', cursor: 'pointer', marginBottom: '20px', padding: 0, fontFamily: 'Inter, sans-serif', display: 'block' }}>← Back</button>
+            <ProgressDots current={1} total={totalSteps} />
+            <h2 className="font-serif text-cream" style={{ fontSize: 'clamp(1.2rem,5vw,1.5rem)', fontWeight: 500, fontStyle: 'italic', lineHeight: 1.5, marginBottom: '28px' }}>{q2.q}</h2>
+            <div>{q2.opts.map(opt => optionBtn(opt, () => handleQ2Option(opt)))}</div>
+          </div>
+        );
+      }
+
+      // ── Q3
+      if (step === 2) {
+        const q3 = getQ3();
+        return (
+          <div className="fade-in" style={wrapStyle}>
+            <button onClick={() => setStep(1)} style={{ background: 'none', border: 'none', color: 'rgba(245,239,230,0.4)', fontSize: '0.88rem', cursor: 'pointer', marginBottom: '20px', padding: 0, fontFamily: 'Inter, sans-serif', display: 'block' }}>← Back</button>
+            <ProgressDots current={2} total={totalSteps} />
+            <h2 className="font-serif text-cream" style={{ fontSize: 'clamp(1.2rem,5vw,1.5rem)', fontWeight: 500, fontStyle: 'italic', lineHeight: 1.5, marginBottom: '28px' }}>{q3.q}</h2>
+            {q3.type === 'text' ? (
+              <>
+                <textarea value={q3Text} onChange={e => setQ3Text(e.target.value)} placeholder="Whatever comes up..." style={textAreaStyle} />
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  {q3.skippable && (
+                    <button onClick={() => handleQ3('')} style={{ marginTop: '16px', background: 'none', border: 'none', color: 'rgba(245,239,230,0.35)', fontSize: '0.88rem', cursor: 'pointer', fontFamily: 'Inter, sans-serif', padding: 0 }}>Skip</button>
+                  )}
+                  {continueBtn(() => handleQ3(q3Text))}
+                </div>
+              </>
+            ) : (
+              <div>{q3.opts.map(opt => optionBtn(opt, () => handleQ3(opt)))}</div>
+            )}
+          </div>
+        );
+      }
+
+      // ── Q4
+      if (step === 3) {
+        return (
+          <div className="fade-in" style={wrapStyle}>
+            <button onClick={() => setStep(2)} style={{ background: 'none', border: 'none', color: 'rgba(245,239,230,0.4)', fontSize: '0.88rem', cursor: 'pointer', marginBottom: '20px', padding: 0, fontFamily: 'Inter, sans-serif', display: 'block' }}>← Back</button>
+            <ProgressDots current={3} total={totalSteps} />
+            <h2 className="font-serif text-cream" style={{ fontSize: 'clamp(1.2rem,5vw,1.5rem)', fontWeight: 500, fontStyle: 'italic', lineHeight: 1.5, marginBottom: '28px' }}>{getQ4()}</h2>
+            <textarea value={q4Text} onChange={e => setQ4Text(e.target.value)} placeholder="Whatever comes up..." style={textAreaStyle} />
+            {continueBtn(() => handleQ4(q4Text))}
+          </div>
+        );
+      }
+
+      // ── Q5
+      if (step === 4) {
+        return (
+          <div className="fade-in" style={wrapStyle}>
+            <button onClick={() => setStep(3)} style={{ background: 'none', border: 'none', color: 'rgba(245,239,230,0.4)', fontSize: '0.88rem', cursor: 'pointer', marginBottom: '20px', padding: 0, fontFamily: 'Inter, sans-serif', display: 'block' }}>← Back</button>
+            <ProgressDots current={4} total={totalSteps} />
+            <h2 className="font-serif text-cream" style={{ fontSize: 'clamp(1.2rem,5vw,1.5rem)', fontWeight: 500, fontStyle: 'italic', lineHeight: 1.5, marginBottom: '28px' }}>{getQ5()}</h2>
+            <textarea value={q5Text} onChange={e => setQ5Text(e.target.value)} placeholder="Whatever comes up..." style={textAreaStyle} />
+            {continueBtn(() => handleQ5(q5Text), 'Finish →')}
+          </div>
+        );
+      }
+
+      return null;
+    }
+
+    // ─────────────────────────────────────────────
     //  SUPPORTIVE PHRASE (post-journal save screen)
     // ─────────────────────────────────────────────
     function getSupportivePhrase(energyLevel, emotionTone, stressIntensity) {
       const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
       if (energyLevel === 'drained' || stressIntensity === 'high')
-        return pick(["You showed up for yourself tonight. That matters.", "Even on the hardest days, you're here. That's enough."]);
+        return pick(["You showed up for yourself today. That matters.", "Even on the hardest days, you're here. That's enough."]);
       if (emotionTone === 'sad' || emotionTone === 'anxious')
         return pick(["It's okay to not be okay. You wrote it down. That's brave.", "Feelings aren't facts, but they deserve to be heard."]);
       if (emotionTone === 'hopeful' || energyLevel === 'good')
-        return pick(["Hold onto tonight. You can come back to this feeling.", "Good evenings are worth celebrating, even quietly."]);
-      return "One evening at a time. You're doing it.";
+        return pick(["Hold onto that. You can come back to this feeling.", "Good days are worth celebrating, even quietly."]);
+      return "One day at a time. You're doing it.";
     }
 
     // ─────────────────────────────────────────────
@@ -1837,6 +2325,8 @@
     // ─────────────────────────────────────────────
     function JournalScreen({ onDone, onBack, onFindActivity }) {
       const today = todayStr();
+      // Unique id for this journal session (so autosave creates one entry, not many)
+      const [entryId] = useState(() => Date.now().toString());
 
       // ── Check-in state ────────────────────────────
       const [step, setStep] = useState(0);
@@ -1875,7 +2365,9 @@
 
       function buildEntry() {
         return {
-          date: today, energyLevel, mentalState, emotionTone, stressIntensity,
+          id: entryId, date: today, flowType: 'checkin',
+          createdAt: new Date().toISOString(),
+          energyLevel, mentalState, emotionTone, stressIntensity,
           prompts: makePromptList(),
           notes: notes || '',
           recommendedActivity: null,
@@ -1883,8 +2375,9 @@
       }
 
       function autosave(lightAns, deepAns) {
-        saveJournalEntry({
-          date: today, energyLevel, mentalState, emotionTone, stressIntensity,
+        upsertEntryById(today, entryId, {
+          date: today, flowType: 'checkin',
+          energyLevel, mentalState, emotionTone, stressIntensity,
           prompts: [
             ...lightPrompts.map((q, i) => ({ question: q, answer: (lightAns || promptAnswers)[i] || '', mode: 'light' })),
             ...(Object.keys(deepAns || deepAnswers).length > 0
@@ -1962,13 +2455,13 @@
       }
 
       function handleSaveAndDone() {
-        saveJournalEntry(buildEntry());
+        upsertEntryById(today, entryId, buildEntry());
         setSavedScreen(true);
       }
 
       function handleDelete() {
         if (!deleteConfirm) { setDeleteConfirm(true); return; }
-        try { localStorage.removeItem(`journal_${today}`); } catch {}
+        deleteEntryById(today, entryId);
         onBack();
       }
 
@@ -2443,8 +2936,14 @@
       }
 
       function getEntryForDate(year, month, day) {
+        // Returns first checkin entry for tint colour (backwards compat)
         const ds = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
         return loadJournalEntry(ds);
+      }
+
+      function getEntriesForDate(year, month, day) {
+        const ds = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+        return loadJournalEntries(ds);
       }
 
       function prevMonth() {
@@ -2501,34 +3000,46 @@
         setConfirmClear(false); setSelectedDay(null); setDeleteConfirm(false); setEditMode(false); setEditData(null); setEntryDates(new Set());
       }
 
-      const selectedDateStr = selectedDay ? `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(selectedDay).padStart(2,'0')}` : null;
-      const selectedEntry   = selectedDay ? getEntryForDate(calYear, calMonth, selectedDay) : null;
+      const selectedDateStr  = selectedDay ? `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(selectedDay).padStart(2,'0')}` : null;
+      const selectedEntry    = selectedDay ? getEntryForDate(calYear, calMonth, selectedDay) : null;
+      const [calEntries,     setCalEntries]   = useState([]);
+      const [calExpandedId,  setCalExpandedId]= useState(null);
+      const [calEditingId,   setCalEditingId] = useState(null);
+      const [calDelConfirm,  setCalDelConfirm]= useState(null);
 
-      function handleDeleteEntry() {
+      // Reload calendar entries whenever selected day changes
+      useEffect(() => {
+        if (selectedDateStr) { setCalEntries(loadJournalEntries(selectedDateStr)); setCalExpandedId(null); setCalEditingId(null); setCalDelConfirm(null); }
+        else setCalEntries([]);
+      }, [selectedDateStr]);
+
+      function reloadCalEntries() { if (selectedDateStr) setCalEntries(loadJournalEntries(selectedDateStr)); }
+
+      function handleDeleteEntry(entryId) {
+        if (calDelConfirm !== entryId) { setCalDelConfirm(entryId); return; }
         if (selectedDateStr) {
-          try { localStorage.removeItem(`journal_${selectedDateStr}`); } catch {}
-          const nd = new Set(entryDates); nd.delete(selectedDateStr); setEntryDates(nd);
+          deleteEntryById(selectedDateStr, entryId);
+          reloadCalEntries();
+          const remaining = loadJournalEntries(selectedDateStr);
+          if (remaining.length === 0) {
+            const nd = new Set(entryDates); nd.delete(selectedDateStr); setEntryDates(nd);
+            setSelectedDay(null);
+          }
         }
-        setSelectedDay(null); setDeleteConfirm(false); setEditMode(false); setEditData(null);
+        setCalDelConfirm(null); setCalEditingId(null); setEditData(null);
+        if (calExpandedId === entryId) setCalExpandedId(null);
       }
 
-      function enterEditMode() {
-        setEditData({
-          energyLevel: selectedEntry?.energyLevel || '',
-          mentalState: selectedEntry?.mentalState || '',
-          prompts: (selectedEntry?.prompts || []).map(p => ({ ...p })),
-          notes: selectedEntry?.notes || '',
-        });
-        setEditMode(true);
-        setDeleteConfirm(false);
+      function enterEditMode(entry) {
+        setEditData({ energyLevel: entry?.energyLevel||'', mentalState: entry?.mentalState||'', prompts: (entry?.prompts||[]).map(p=>({...p})), notes: entry?.notes||'' });
+        setCalEditingId(entry?.id);
+        setCalDelConfirm(null);
       }
 
-      function handleSaveEdit() {
-        if (!selectedDateStr || !editData || !selectedEntry) return;
-        const updated = { ...selectedEntry, energyLevel: editData.energyLevel, mentalState: editData.mentalState, prompts: editData.prompts, notes: editData.notes || '' };
-        try { localStorage.setItem(`journal_${selectedDateStr}`, JSON.stringify(updated)); } catch {}
-        setEditMode(false);
-        setEditData(null);
+      function handleSaveEdit(entry) {
+        if (!selectedDateStr || !editData || !entry) return;
+        upsertEntryById(selectedDateStr, entry.id, { ...entry, ...editData });
+        reloadCalEntries(); setCalEditingId(null); setEditData(null);
       }
 
       function formatDateNice(dateStr) {
@@ -2848,82 +3359,114 @@
                       <button onClick={clearAllEntries} style={{ background:confirmClear?'rgba(232,152,122,0.12)':'rgba(245,239,230,0.04)', color:confirmClear?'#e8987a':'rgba(245,239,230,0.28)', border:confirmClear?'1px solid rgba(232,152,122,0.3)':'1px solid rgba(245,239,230,0.08)', borderRadius:'7px', padding:'4px 9px', fontSize:'0.68rem', cursor:'pointer', fontFamily:'Inter, sans-serif' }}>{confirmClear ? 'Confirm?' : 'Clear all'}</button>
                     </div>
                   </div>
-                  {/* Entry viewer */}
-                  {selectedDay && selectedEntry ? (
-                    <div className="fade-in" style={{ background:'rgba(245,239,230,0.05)', border:'1px solid rgba(245,239,230,0.1)', borderRadius:'16px', padding:'16px', marginBottom:'20px' }}>
-                      <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:'12px', gap:'10px' }}>
-                        <p className="font-serif" style={{ color:'#d4a853', fontSize:'0.95rem', fontWeight:600 }}>{formatDateNice(selectedDateStr)}</p>
-                        {editMode ? (
-                          <span style={{ color:'rgba(245,239,230,0.3)', fontSize:'0.72rem', fontFamily:'Inter, sans-serif', flexShrink:0 }}>editing</span>
-                        ) : deleteConfirm ? (
-                          <div style={{ display:'flex', gap:'7px', alignItems:'center', flexShrink:0 }}>
-                            <button onClick={handleDeleteEntry} style={{ background:'none', border:'none', color:'#e8987a', fontSize:'0.74rem', cursor:'pointer', fontFamily:'Inter, sans-serif' }}>Delete</button>
-                            <button onClick={()=>setDeleteConfirm(false)} style={{ background:'none', border:'none', color:'rgba(245,239,230,0.35)', fontSize:'0.74rem', cursor:'pointer', fontFamily:'Inter, sans-serif' }}>Cancel</button>
-                          </div>
-                        ) : (
-                          <div style={{ display:'flex', gap:'10px', alignItems:'center', flexShrink:0 }}>
-                            <button onClick={enterEditMode} style={{ background:'none', border:'none', color:'rgba(245,239,230,0.35)', fontSize:'0.74rem', cursor:'pointer', fontFamily:'Inter, sans-serif' }}>Edit</button>
-                            <button onClick={()=>setDeleteConfirm(true)} style={{ background:'none', border:'none', color:'rgba(245,239,230,0.25)', fontSize:'0.74rem', cursor:'pointer', fontFamily:'Inter, sans-serif' }}>Delete</button>
-                          </div>
-                        )}
-                      </div>
-                      {editMode && editData ? (
-                        <div>
-                          <div style={{ display:'flex', flexDirection:'column', gap:'5px', marginBottom:'12px' }}>
-                            {[{value:'drained',emoji:'🪫',label:'Completely drained'},{value:'tired',emoji:'😴',label:'Tired but okay'},{value:'neutral',emoji:'😐',label:'Neutral'},{value:'good',emoji:'✨',label:'Surprisingly good'}].map(opt => (
-                              <button key={opt.value} onClick={()=>setEditData(d=>({...d,energyLevel:opt.value}))}
-                                style={{ display:'flex', alignItems:'center', gap:'9px', background:editData.energyLevel===opt.value?'rgba(196,113,79,0.18)':'rgba(245,239,230,0.04)', border:editData.energyLevel===opt.value?'1px solid rgba(196,113,79,0.5)':'1px solid rgba(245,239,230,0.1)', borderRadius:'9px', padding:'7px 11px', cursor:'pointer', textAlign:'left', transition:'all 0.15s' }}>
-                                <span>{opt.emoji}</span><span style={{ color:editData.energyLevel===opt.value?'#f5efe6':'rgba(245,239,230,0.55)', fontSize:'0.82rem', fontFamily:'Inter, sans-serif' }}>{opt.label}</span>
-                              </button>
-                            ))}
-                          </div>
-                          <div style={{ display:'flex', flexDirection:'column', gap:'5px', marginBottom:'14px' }}>
-                            {[{value:'overstimulated',emoji:'🌀',label:'Overstimulated'},{value:'foggy',emoji:'🌫️',label:'Foggy and kind of blank'},{value:'clear',emoji:'🙂',label:'Clear enough'}].map(opt => (
-                              <button key={opt.value} onClick={()=>setEditData(d=>({...d,mentalState:opt.value}))}
-                                style={{ display:'flex', alignItems:'center', gap:'9px', background:editData.mentalState===opt.value?'rgba(196,113,79,0.18)':'rgba(245,239,230,0.04)', border:editData.mentalState===opt.value?'1px solid rgba(196,113,79,0.5)':'1px solid rgba(245,239,230,0.1)', borderRadius:'9px', padding:'7px 11px', cursor:'pointer', textAlign:'left', transition:'all 0.15s' }}>
-                                <span>{opt.emoji}</span><span style={{ color:editData.mentalState===opt.value?'#f5efe6':'rgba(245,239,230,0.55)', fontSize:'0.82rem', fontFamily:'Inter, sans-serif' }}>{opt.label}</span>
-                              </button>
-                            ))}
-                          </div>
-                          <div style={{ display:'flex', flexDirection:'column', gap:'10px', marginBottom:'14px' }}>
-                            {editData.prompts.map((p,i) => (
-                              <div key={i}>
-                                <p className="font-serif" style={{ color:'rgba(245,239,230,0.45)', fontSize:'0.82rem', fontStyle:'italic', marginBottom:'5px' }}>{p.question}</p>
-                                <textarea value={p.answer} onChange={e=>setEditData(d=>({...d,prompts:d.prompts.map((pr,j)=>j===i?{...pr,answer:e.target.value}:pr)}))}
-                                  style={{ width:'100%', boxSizing:'border-box', background:'rgba(245,239,230,0.06)', border:'1px solid rgba(245,239,230,0.12)', borderRadius:'9px', padding:'10px', color:'#f5efe6', fontSize:'0.84rem', lineHeight:1.6, resize:'vertical', outline:'none', minHeight:'70px', fontFamily:'Inter, sans-serif' }} />
-                              </div>
-                            ))}
-                          </div>
-                          <textarea value={editData.notes||''} onChange={e=>setEditData(d=>({...d,notes:e.target.value}))} placeholder="Notes..."
-                            style={{ width:'100%', boxSizing:'border-box', background:'rgba(245,239,230,0.06)', border:'1px solid rgba(245,239,230,0.12)', borderRadius:'9px', padding:'10px', color:'#f5efe6', fontSize:'0.84rem', lineHeight:1.6, resize:'vertical', outline:'none', minHeight:'60px', fontFamily:'Inter, sans-serif', marginBottom:'12px' }} />
-                          <div style={{ display:'flex', gap:'8px' }}>
-                            <button onClick={handleSaveEdit} style={{ flex:1, background:'#c4714f', color:'#f5efe6', border:'none', borderRadius:'10px', padding:'10px', fontSize:'0.84rem', fontWeight:600, cursor:'pointer', fontFamily:'Inter, sans-serif' }}>Save</button>
-                            <button onClick={()=>{setEditMode(false);setEditData(null);}} style={{ flex:1, background:'transparent', color:'rgba(245,239,230,0.5)', border:'1px solid rgba(245,239,230,0.15)', borderRadius:'10px', padding:'10px', fontSize:'0.84rem', cursor:'pointer', fontFamily:'Inter, sans-serif' }}>Cancel</button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div>
-                          {(selectedEntry.energyLevel || selectedEntry.mentalState) && (
-                            <div style={{ display:'flex', gap:'5px', flexWrap:'wrap', marginBottom:'12px' }}>
-                              {selectedEntry.energyLevel && (() => { const t=ENERGY_TINTS[selectedEntry.energyLevel]; return <span style={{ background:t?t.bg:'rgba(245,239,230,0.07)', color:t?t.text:'rgba(245,239,230,0.65)', borderRadius:'20px', padding:'3px 9px', fontSize:'0.75rem', fontFamily:'Inter, sans-serif' }}>{energyEmoji[selectedEntry.energyLevel]} {energyLabel[selectedEntry.energyLevel]}</span>; })()}
-                              {selectedEntry.mentalState && <span style={{ background:'rgba(245,239,230,0.07)', borderRadius:'20px', padding:'3px 9px', fontSize:'0.75rem', color:'rgba(245,239,230,0.6)', fontFamily:'Inter, sans-serif' }}>{mentalEmoji[selectedEntry.mentalState]} {mentalLabel[selectedEntry.mentalState]}</span>}
+                  {/* Entry viewer — multi-entry */}
+                  {selectedDay && calEntries.length > 0 ? (
+                    <div className="fade-in" style={{ marginBottom:'20px' }}>
+                      <p className="font-serif" style={{ color:'#d4a853', fontSize:'0.88rem', fontWeight:600, marginBottom:'10px' }}>{formatDateNice(selectedDateStr)}</p>
+                      {calEntries.map(entry => {
+                        const id = entry.id;
+                        const expanded = calExpandedId === id;
+                        const editing  = calEditingId === id;
+                        const isCheckin = entry.flowType !== 'emotional';
+                        const flowLabel = isCheckin ? 'Check in' : 'Explore a feeling';
+                        const preview = isCheckin ? (entry.prompts||[])[0]?.answer||'' : (entry.emotionalFlow||[])[0]?.answer||'';
+                        const time = entry.createdAt ? (() => { try { return new Date(entry.createdAt).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true}).toLowerCase(); } catch { return ''; } })() : '';
+                        return (
+                          <div key={id} style={{ background:'rgba(245,239,230,0.05)', border:`1px solid ${expanded?'rgba(196,113,79,0.28)':'rgba(245,239,230,0.09)'}`, borderRadius:'13px', marginBottom:'8px', overflow:'hidden', transition:'border-color 0.2s' }}>
+                            <div onClick={() => { if (!editing) { setCalExpandedId(expanded?null:id); setCalDelConfirm(null); } }}
+                              style={{ display:'flex', alignItems:'center', gap:'6px', padding:'10px 12px', cursor:editing?'default':'pointer', userSelect:'none' }}>
+                              <span style={{ background:'rgba(196,113,79,0.15)', color:'#e8987a', borderRadius:'20px', padding:'2px 8px', fontSize:'0.65rem', fontWeight:600, fontFamily:'Inter, sans-serif', flexShrink:0 }}>{flowLabel}</span>
+                              {time && <span style={{ color:'rgba(245,239,230,0.3)', fontSize:'0.68rem', fontFamily:'Inter, sans-serif' }}>{time}</span>}
+                              {isCheckin && entry.energyLevel && (() => { const t=ENERGY_TINTS[entry.energyLevel]; return <span style={{ background:t?t.bg:'rgba(245,239,230,0.07)', color:t?t.text:'rgba(245,239,230,0.55)', borderRadius:'20px', padding:'2px 7px', fontSize:'0.65rem', fontFamily:'Inter, sans-serif' }}>{energyEmoji[entry.energyLevel]}</span>; })()}
+                              <span style={{ color:'rgba(245,239,230,0.22)', fontSize:'0.7rem', marginLeft:'auto' }}>{expanded?'∨':'›'}</span>
                             </div>
-                          )}
-                          <div style={{ borderTop:'0.5px solid rgba(245,239,230,0.08)', marginBottom:'12px' }} />
-                          <div style={{ display:'flex', flexDirection:'column', gap:'12px' }}>
-                            {selectedEntry.prompts && selectedEntry.prompts.map((p,i) => (
-                              <div key={i}>
-                                <p className="font-serif" style={{ color:'rgba(245,239,230,0.45)', fontSize:'0.82rem', fontStyle:'italic', marginBottom:'3px' }}>{p.question}</p>
-                                <p style={{ color:'#f5efe6', fontSize:'0.86rem', lineHeight:1.6, fontFamily:'Inter, sans-serif', whiteSpace:'pre-wrap' }}>{p.answer || <em style={{ opacity:0.35 }}>No answer</em>}</p>
+                            {!expanded && !editing && preview && (
+                              <p style={{ color:'rgba(245,239,230,0.35)', fontSize:'0.77rem', fontFamily:'Inter, sans-serif', lineHeight:1.5, padding:'0 12px 9px', margin:0, overflow:'hidden', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical' }}>{preview}</p>
+                            )}
+                            {expanded && (
+                              <div style={{ padding:'0 12px 12px', borderTop:'0.5px solid rgba(245,239,230,0.07)' }} onClick={e=>e.stopPropagation()}>
+                                {!editing && (
+                                  <div style={{ display:'flex', gap:'8px', alignItems:'center', justifyContent:'flex-end', paddingTop:'8px', marginBottom:'10px' }}>
+                                    {calDelConfirm===id ? (
+                                      <>
+                                        <span style={{ color:'rgba(245,239,230,0.45)', fontSize:'0.72rem', fontFamily:'Inter, sans-serif' }}>Delete?</span>
+                                        <button onClick={()=>handleDeleteEntry(id)} style={{ background:'none', border:'none', color:'#e8987a', fontSize:'0.72rem', cursor:'pointer', fontFamily:'Inter, sans-serif' }}>Confirm</button>
+                                        <button onClick={()=>setCalDelConfirm(null)} style={{ background:'none', border:'none', color:'rgba(245,239,230,0.35)', fontSize:'0.72rem', cursor:'pointer', fontFamily:'Inter, sans-serif' }}>Cancel</button>
+                                      </>
+                                    ) : (
+                                      <>
+                                        {isCheckin && <button onClick={()=>enterEditMode(entry)} style={{ background:'none', border:'none', color:'rgba(245,239,230,0.35)', fontSize:'0.72rem', cursor:'pointer', fontFamily:'Inter, sans-serif' }}>Edit</button>}
+                                        <button onClick={()=>handleDeleteEntry(id)} style={{ background:'none', border:'none', color:'rgba(245,239,230,0.22)', fontSize:'0.72rem', cursor:'pointer', fontFamily:'Inter, sans-serif' }}>Delete</button>
+                                      </>
+                                    )}
+                                  </div>
+                                )}
+                                {editing && editData ? (
+                                  <div style={{ paddingTop:'8px' }}>
+                                    <div style={{ display:'flex', flexDirection:'column', gap:'5px', marginBottom:'10px' }}>
+                                      {[{value:'drained',emoji:'🪫',label:'Completely drained'},{value:'tired',emoji:'😴',label:'Tired but okay'},{value:'neutral',emoji:'😐',label:'Neutral'},{value:'good',emoji:'✨',label:'Surprisingly good'}].map(opt=>(
+                                        <button key={opt.value} onClick={()=>setEditData(d=>({...d,energyLevel:opt.value}))}
+                                          style={{ display:'flex', alignItems:'center', gap:'9px', background:editData.energyLevel===opt.value?'rgba(196,113,79,0.18)':'rgba(245,239,230,0.04)', border:editData.energyLevel===opt.value?'1px solid rgba(196,113,79,0.5)':'1px solid rgba(245,239,230,0.1)', borderRadius:'9px', padding:'7px 11px', cursor:'pointer', textAlign:'left', transition:'all 0.15s' }}>
+                                          <span>{opt.emoji}</span><span style={{ color:editData.energyLevel===opt.value?'#f5efe6':'rgba(245,239,230,0.55)', fontSize:'0.82rem', fontFamily:'Inter, sans-serif' }}>{opt.label}</span>
+                                        </button>
+                                      ))}
+                                    </div>
+                                    <div style={{ display:'flex', flexDirection:'column', gap:'5px', marginBottom:'12px' }}>
+                                      {[{value:'overstimulated',emoji:'🌀',label:'Overstimulated'},{value:'foggy',emoji:'🌫️',label:'Foggy and kind of blank'},{value:'clear',emoji:'🙂',label:'Clear enough'}].map(opt=>(
+                                        <button key={opt.value} onClick={()=>setEditData(d=>({...d,mentalState:opt.value}))}
+                                          style={{ display:'flex', alignItems:'center', gap:'9px', background:editData.mentalState===opt.value?'rgba(196,113,79,0.18)':'rgba(245,239,230,0.04)', border:editData.mentalState===opt.value?'1px solid rgba(196,113,79,0.5)':'1px solid rgba(245,239,230,0.1)', borderRadius:'9px', padding:'7px 11px', cursor:'pointer', textAlign:'left', transition:'all 0.15s' }}>
+                                          <span>{opt.emoji}</span><span style={{ color:editData.mentalState===opt.value?'#f5efe6':'rgba(245,239,230,0.55)', fontSize:'0.82rem', fontFamily:'Inter, sans-serif' }}>{opt.label}</span>
+                                        </button>
+                                      ))}
+                                    </div>
+                                    <div style={{ display:'flex', flexDirection:'column', gap:'10px', marginBottom:'10px' }}>
+                                      {editData.prompts.map((p,i)=>(
+                                        <div key={i}>
+                                          <p className="font-serif" style={{ color:'rgba(245,239,230,0.45)', fontSize:'0.8rem', fontStyle:'italic', marginBottom:'4px' }}>{p.question}</p>
+                                          <textarea value={p.answer} onChange={e=>setEditData(d=>({...d,prompts:d.prompts.map((pr,j)=>j===i?{...pr,answer:e.target.value}:pr)}))}
+                                            style={{ width:'100%', boxSizing:'border-box', background:'rgba(245,239,230,0.06)', border:'1px solid rgba(245,239,230,0.12)', borderRadius:'9px', padding:'9px', color:'#f5efe6', fontSize:'0.82rem', lineHeight:1.6, resize:'vertical', outline:'none', minHeight:'60px', fontFamily:'Inter, sans-serif' }} />
+                                        </div>
+                                      ))}
+                                    </div>
+                                    <textarea value={editData.notes||''} onChange={e=>setEditData(d=>({...d,notes:e.target.value}))} placeholder="Notes..."
+                                      style={{ width:'100%', boxSizing:'border-box', background:'rgba(245,239,230,0.06)', border:'1px solid rgba(245,239,230,0.12)', borderRadius:'9px', padding:'9px', color:'#f5efe6', fontSize:'0.82rem', lineHeight:1.6, resize:'vertical', outline:'none', minHeight:'50px', fontFamily:'Inter, sans-serif', marginBottom:'10px' }} />
+                                    <div style={{ display:'flex', gap:'8px' }}>
+                                      <button onClick={()=>handleSaveEdit(entry)} style={{ flex:1, background:'#c4714f', color:'#f5efe6', border:'none', borderRadius:'10px', padding:'9px', fontSize:'0.82rem', fontWeight:600, cursor:'pointer', fontFamily:'Inter, sans-serif' }}>Save</button>
+                                      <button onClick={()=>{setCalEditingId(null);setEditData(null);}} style={{ flex:1, background:'transparent', color:'rgba(245,239,230,0.5)', border:'1px solid rgba(245,239,230,0.15)', borderRadius:'10px', padding:'9px', fontSize:'0.82rem', cursor:'pointer', fontFamily:'Inter, sans-serif' }}>Cancel</button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div>
+                                    {isCheckin && (entry.energyLevel||entry.mentalState) && (
+                                      <div style={{ display:'flex', gap:'5px', flexWrap:'wrap', marginBottom:'10px' }}>
+                                        {entry.energyLevel && (() => { const t=ENERGY_TINTS[entry.energyLevel]; return <span style={{ background:t?t.bg:'rgba(245,239,230,0.07)', color:t?t.text:'rgba(245,239,230,0.65)', borderRadius:'20px', padding:'3px 9px', fontSize:'0.73rem', fontFamily:'Inter, sans-serif' }}>{energyEmoji[entry.energyLevel]} {energyLabel[entry.energyLevel]}</span>; })()}
+                                        {entry.mentalState && <span style={{ background:'rgba(245,239,230,0.07)', borderRadius:'20px', padding:'3px 9px', fontSize:'0.73rem', color:'rgba(245,239,230,0.6)', fontFamily:'Inter, sans-serif' }}>{mentalEmoji[entry.mentalState]} {mentalLabel[entry.mentalState]}</span>}
+                                      </div>
+                                    )}
+                                    {isCheckin && (
+                                      <div style={{ display:'flex', flexDirection:'column', gap:'10px' }}>
+                                        {(entry.prompts||[]).map((p,i)=>(
+                                          <div key={i}>
+                                            <p className="font-serif" style={{ color:'rgba(245,239,230,0.45)', fontSize:'0.8rem', fontStyle:'italic', marginBottom:'3px' }}>{p.question}</p>
+                                            <p style={{ color:'#f5efe6', fontSize:'0.84rem', lineHeight:1.6, fontFamily:'Inter, sans-serif', whiteSpace:'pre-wrap' }}>{p.answer||<em style={{opacity:0.35}}>No answer</em>}</p>
+                                          </div>
+                                        ))}
+                                        {entry.notes && (<><div style={{ borderTop:'0.5px solid rgba(245,239,230,0.08)', margin:'10px 0 6px' }} /><p style={{ color:'rgba(245,239,230,0.62)', fontSize:'0.82rem', lineHeight:1.6, fontFamily:'Inter, sans-serif', whiteSpace:'pre-wrap' }}>{entry.notes}</p></>)}
+                                        {entry.recommendedActivity && (<><div style={{ borderTop:'0.5px solid rgba(245,239,230,0.08)', margin:'10px 0 6px' }} /><p style={{ color:'rgba(245,239,230,0.38)', fontSize:'0.75rem', fontFamily:'Inter, sans-serif' }}>Chose that day: {entry.recommendedActivity.emoji} {entry.recommendedActivity.name}</p></>)}
+                                      </div>
+                                    )}
+                                    {!isCheckin && (
+                                      <div style={{ display:'flex', flexDirection:'column', gap:'10px' }}>
+                                        {(entry.emotionalFlow||[]).map((f,i)=>f.answer?<div key={i}><p style={{ color:'#f5efe6', fontSize:'0.84rem', lineHeight:1.6, fontFamily:'Inter, sans-serif', whiteSpace:'pre-wrap' }}>{f.answer}</p></div>:null)}
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
                               </div>
-                            ))}
+                            )}
                           </div>
-                          {selectedEntry.notes && (
-                            <><div style={{ borderTop:'0.5px solid rgba(245,239,230,0.08)', margin:'12px 0 8px' }} />
-                            <p style={{ color:'rgba(245,239,230,0.62)', fontSize:'0.84rem', lineHeight:1.6, fontFamily:'Inter, sans-serif', whiteSpace:'pre-wrap' }}>{selectedEntry.notes}</p></>
-                          )}
-                        </div>
-                      )}
+                        );
+                      })}
                     </div>
                   ) : (
                     <div style={{ display:'flex', flexDirection:'column', alignItems:'center', padding:'24px 0', opacity:0.28 }}>
@@ -3141,131 +3684,116 @@
               </div>
             </div>
 
-            {/* Entry preview */}
-            {selectedDay && selectedEntry ? (
-              <div className="fade-in" style={{ background:'rgba(245,239,230,0.05)', border:'1px solid rgba(245,239,230,0.1)', borderRadius:'18px', padding:'20px', marginBottom:'28px' }}>
-                <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:'14px', gap:'12px' }}>
-                  <p className="font-serif" style={{ color:'#d4a853', fontSize:'1rem', fontWeight:600 }}>{formatDateNice(selectedDateStr)}</p>
-                  {editMode ? (
-                    <span style={{ color:'rgba(245,239,230,0.3)', fontSize:'0.74rem', fontFamily:'Inter, sans-serif', flexShrink:0 }}>editing</span>
-                  ) : deleteConfirm ? (
-                    <div style={{ display:'flex', gap:'8px', alignItems:'center', flexShrink:0 }}>
-                      <span style={{ color:'rgba(245,239,230,0.45)', fontSize:'0.76rem', fontFamily:'Inter, sans-serif' }}>Delete?</span>
-                      <button onClick={handleDeleteEntry} style={{ background:'none', border:'none', color:'#e8987a', fontSize:'0.76rem', cursor:'pointer', fontFamily:'Inter, sans-serif' }}>Confirm</button>
-                      <button onClick={()=>setDeleteConfirm(false)} style={{ background:'none', border:'none', color:'rgba(245,239,230,0.35)', fontSize:'0.76rem', cursor:'pointer', fontFamily:'Inter, sans-serif' }}>Cancel</button>
-                    </div>
-                  ) : (
-                    <div style={{ display:'flex', gap:'12px', alignItems:'center', flexShrink:0 }}>
-                      <button onClick={enterEditMode} style={{ background:'none', border:'none', color:'rgba(245,239,230,0.35)', fontSize:'0.76rem', cursor:'pointer', fontFamily:'Inter, sans-serif', transition:'color 0.2s' }}
-                        onMouseEnter={e=>e.currentTarget.style.color='rgba(245,239,230,0.7)'}
-                        onMouseLeave={e=>e.currentTarget.style.color='rgba(245,239,230,0.35)'}
-                      >Edit entry</button>
-                      <button onClick={()=>setDeleteConfirm(true)} style={{ background:'none', border:'none', color:'rgba(245,239,230,0.25)', fontSize:'0.76rem', cursor:'pointer', fontFamily:'Inter, sans-serif', transition:'color 0.2s' }}
-                        onMouseEnter={e=>e.currentTarget.style.color='#e8987a'}
-                        onMouseLeave={e=>e.currentTarget.style.color='rgba(245,239,230,0.25)'}
-                      >Delete entry</button>
-                    </div>
-                  )}
-                </div>
-
-                {editMode && editData ? (
-                  <div>
-                    <p style={{ color:'rgba(245,239,230,0.45)', fontSize:'0.75rem', fontFamily:'Inter, sans-serif', marginBottom:'8px', textTransform:'uppercase', letterSpacing:'0.06em' }}>Body feeling</p>
-                    <div style={{ display:'flex', flexDirection:'column', gap:'6px', marginBottom:'16px' }}>
-                      {[{value:'drained',emoji:'🪫',label:'Completely drained'},{value:'tired',emoji:'😴',label:'Tired but okay'},{value:'neutral',emoji:'😐',label:'Neutral'},{value:'good',emoji:'✨',label:'Surprisingly good'}].map(opt => (
-                        <button key={opt.value} onClick={()=>setEditData(d=>({...d,energyLevel:opt.value}))}
-                          style={{ display:'flex', alignItems:'center', gap:'10px', background:editData.energyLevel===opt.value?'rgba(196,113,79,0.18)':'rgba(245,239,230,0.04)', border:editData.energyLevel===opt.value?'1px solid rgba(196,113,79,0.5)':'1px solid rgba(245,239,230,0.1)', borderRadius:'10px', padding:'9px 13px', cursor:'pointer', textAlign:'left', transition:'all 0.15s' }}>
-                          <span style={{ fontSize:'1rem' }}>{opt.emoji}</span>
-                          <span style={{ color:editData.energyLevel===opt.value?'#f5efe6':'rgba(245,239,230,0.55)', fontSize:'0.84rem', fontFamily:'Inter, sans-serif' }}>{opt.label}</span>
-                        </button>
-                      ))}
-                    </div>
-                    <p style={{ color:'rgba(245,239,230,0.45)', fontSize:'0.75rem', fontFamily:'Inter, sans-serif', marginBottom:'8px', textTransform:'uppercase', letterSpacing:'0.06em' }}>Head feeling</p>
-                    <div style={{ display:'flex', flexDirection:'column', gap:'6px', marginBottom:'20px' }}>
-                      {[{value:'overstimulated',emoji:'🌀',label:'Overstimulated'},{value:'foggy',emoji:'🌫️',label:'Foggy and kind of blank'},{value:'clear',emoji:'🙂',label:'Clear enough'}].map(opt => (
-                        <button key={opt.value} onClick={()=>setEditData(d=>({...d,mentalState:opt.value}))}
-                          style={{ display:'flex', alignItems:'center', gap:'10px', background:editData.mentalState===opt.value?'rgba(196,113,79,0.18)':'rgba(245,239,230,0.04)', border:editData.mentalState===opt.value?'1px solid rgba(196,113,79,0.5)':'1px solid rgba(245,239,230,0.1)', borderRadius:'10px', padding:'9px 13px', cursor:'pointer', textAlign:'left', transition:'all 0.15s' }}>
-                          <span style={{ fontSize:'1rem' }}>{opt.emoji}</span>
-                          <span style={{ color:editData.mentalState===opt.value?'#f5efe6':'rgba(245,239,230,0.55)', fontSize:'0.84rem', fontFamily:'Inter, sans-serif' }}>{opt.label}</span>
-                        </button>
-                      ))}
-                    </div>
-                    <div style={{ borderTop:'0.5px solid rgba(245,239,230,0.08)', marginBottom:'16px' }} />
-                    <div style={{ display:'flex', flexDirection:'column', gap:'16px', marginBottom:'20px' }}>
-                      {editData.prompts.map((p,i) => (
-                        <div key={i}>
-                          <p className="font-serif" style={{ color:'rgba(245,239,230,0.48)', fontSize:'0.87rem', fontStyle:'italic', marginBottom:'6px' }}>{p.question}</p>
-                          <textarea value={p.answer} onChange={e=>setEditData(d=>({...d,prompts:d.prompts.map((pr,j)=>j===i?{...pr,answer:e.target.value}:pr)}))}
-                            style={{ width:'100%', boxSizing:'border-box', background:'rgba(245,239,230,0.06)', border:'1px solid rgba(245,239,230,0.12)', borderRadius:'10px', padding:'12px', color:'#f5efe6', fontSize:'0.88rem', lineHeight:1.6, resize:'vertical', outline:'none', minHeight:'90px', fontFamily:'Inter, sans-serif' }}
-                          />
-                        </div>
-                      ))}
-                    </div>
-                    <div style={{ marginBottom:'20px' }}>
-                      <p style={{ color:'rgba(245,239,230,0.45)', fontSize:'0.75rem', fontFamily:'Inter, sans-serif', marginBottom:'8px', textTransform:'uppercase', letterSpacing:'0.06em' }}>Notes</p>
-                      <textarea value={editData.notes||''} onChange={e=>setEditData(d=>({...d,notes:e.target.value}))} placeholder="A thought, a moment, anything..."
-                        style={{ width:'100%', boxSizing:'border-box', background:'rgba(245,239,230,0.06)', border:'1px solid rgba(245,239,230,0.12)', borderRadius:'10px', padding:'12px', color:'#f5efe6', fontSize:'0.88rem', lineHeight:1.6, resize:'vertical', outline:'none', minHeight:'80px', fontFamily:'Inter, sans-serif' }}
-                      />
-                    </div>
-                    <div style={{ display:'flex', gap:'10px' }}>
-                      <button onClick={handleSaveEdit}
-                        style={{ flex:1, background:'#c4714f', color:'#f5efe6', border:'none', borderRadius:'12px', padding:'12px', fontSize:'0.88rem', fontWeight:600, cursor:'pointer', fontFamily:'Inter, sans-serif', transition:'background 0.2s' }}
-                        onMouseEnter={e=>e.currentTarget.style.background='#a35a3a'} onMouseLeave={e=>e.currentTarget.style.background='#c4714f'}
-                      >Save changes</button>
-                      <button onClick={()=>{setEditMode(false);setEditData(null);}}
-                        style={{ flex:1, background:'transparent', color:'rgba(245,239,230,0.5)', border:'1px solid rgba(245,239,230,0.15)', borderRadius:'12px', padding:'12px', fontSize:'0.88rem', cursor:'pointer', fontFamily:'Inter, sans-serif', transition:'all 0.2s' }}
-                        onMouseEnter={e=>{e.currentTarget.style.borderColor='rgba(245,239,230,0.35)';e.currentTarget.style.color='rgba(245,239,230,0.8)';}}
-                        onMouseLeave={e=>{e.currentTarget.style.borderColor='rgba(245,239,230,0.15)';e.currentTarget.style.color='rgba(245,239,230,0.5)';}}
-                      >Cancel</button>
-                    </div>
-                  </div>
-                ) : (
-                  <div>
-                    {(selectedEntry.energyLevel || selectedEntry.mentalState) && (
-                      <div style={{ display:'flex', gap:'7px', flexWrap:'wrap', marginBottom:'16px' }}>
-                        {selectedEntry.energyLevel && (() => {
-                          const t = ENERGY_TINTS[selectedEntry.energyLevel];
-                          return <span style={{ background:t?t.bg:'rgba(245,239,230,0.07)', color:t?t.text:'rgba(245,239,230,0.65)', borderRadius:'20px', padding:'4px 11px', fontSize:'0.79rem', fontFamily:'Inter, sans-serif', border:t?`1px solid ${t.text}30`:'none' }}>{energyEmoji[selectedEntry.energyLevel]} {energyLabel[selectedEntry.energyLevel]}</span>;
-                        })()}
-                        {selectedEntry.mentalState && (
-                          <span style={{ background:'rgba(245,239,230,0.07)', borderRadius:'20px', padding:'4px 11px', fontSize:'0.79rem', color:'rgba(245,239,230,0.6)', fontFamily:'Inter, sans-serif' }}>{mentalEmoji[selectedEntry.mentalState]} {mentalLabel[selectedEntry.mentalState]}</span>
-                        )}
-                        {selectedEntry.emotionTone && (
-                          <span style={{ background:'rgba(245,239,230,0.07)', borderRadius:'20px', padding:'4px 11px', fontSize:'0.79rem', color:'rgba(245,239,230,0.6)', fontFamily:'Inter, sans-serif' }}>{emotionEmoji[selectedEntry.emotionTone]} {emotionLabel[selectedEntry.emotionTone]}</span>
-                        )}
-                        {selectedEntry.stressIntensity && (
-                          <span style={{ background:'rgba(245,239,230,0.07)', borderRadius:'20px', padding:'4px 11px', fontSize:'0.79rem', color:'rgba(245,239,230,0.6)', fontFamily:'Inter, sans-serif' }}>{stressEmoji[selectedEntry.stressIntensity]} {stressLabel[selectedEntry.stressIntensity]}</span>
-                        )}
+            {/* Entry viewer — multi-entry */}
+            {selectedDay && calEntries.length > 0 ? (
+              <div className="fade-in" style={{ marginBottom:'28px' }}>
+                <p className="font-serif" style={{ color:'#d4a853', fontSize:'0.95rem', fontWeight:600, marginBottom:'12px' }}>{formatDateNice(selectedDateStr)}</p>
+                {calEntries.map(entry => {
+                  const id = entry.id;
+                  const expanded = calExpandedId === id;
+                  const editing  = calEditingId === id;
+                  const isCheckin = entry.flowType !== 'emotional';
+                  const flowLabel = isCheckin ? 'Check in' : 'Explore a feeling';
+                  const preview = isCheckin ? (entry.prompts||[])[0]?.answer||'' : (entry.emotionalFlow||[])[0]?.answer||'';
+                  const time = entry.createdAt ? (() => { try { return new Date(entry.createdAt).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true}).toLowerCase(); } catch { return ''; } })() : '';
+                  return (
+                    <div key={id} style={{ background:'rgba(245,239,230,0.05)', border:`1px solid ${expanded?'rgba(196,113,79,0.28)':'rgba(245,239,230,0.09)'}`, borderRadius:'14px', marginBottom:'10px', overflow:'hidden', transition:'border-color 0.2s' }}>
+                      <div onClick={() => { if (!editing) { setCalExpandedId(expanded?null:id); setCalDelConfirm(null); } }}
+                        style={{ display:'flex', alignItems:'center', gap:'8px', padding:'12px 16px', cursor:editing?'default':'pointer', userSelect:'none' }}>
+                        <span style={{ background:'rgba(196,113,79,0.15)', color:'#e8987a', borderRadius:'20px', padding:'2px 9px', fontSize:'0.68rem', fontWeight:600, fontFamily:'Inter, sans-serif', flexShrink:0 }}>{flowLabel}</span>
+                        {time && <span style={{ color:'rgba(245,239,230,0.3)', fontSize:'0.72rem', fontFamily:'Inter, sans-serif' }}>{time}</span>}
+                        {isCheckin && entry.energyLevel && (() => { const t=ENERGY_TINTS[entry.energyLevel]; return <span style={{ background:t?t.bg:'rgba(245,239,230,0.07)', color:t?t.text:'rgba(245,239,230,0.55)', borderRadius:'20px', padding:'2px 8px', fontSize:'0.68rem', fontFamily:'Inter, sans-serif' }}>{energyEmoji[entry.energyLevel]}</span>; })()}
+                        <span style={{ color:'rgba(245,239,230,0.22)', fontSize:'0.75rem', marginLeft:'auto' }}>{expanded?'∨':'›'}</span>
                       </div>
-                    )}
-                    <div style={{ borderTop:'0.5px solid rgba(245,239,230,0.08)', marginBottom:'14px' }} />
-                    <div style={{ display:'flex', flexDirection:'column', gap:'16px' }}>
-                      {selectedEntry.prompts && selectedEntry.prompts.map((p,i) => (
-                        <div key={i}>
-                          <p className="font-serif" style={{ color:'rgba(245,239,230,0.48)', fontSize:'0.87rem', fontStyle:'italic', marginBottom:'4px' }}>{p.question}</p>
-                          <p style={{ color:'#f5efe6', fontSize:'0.9rem', lineHeight:1.65, fontFamily:'Inter, sans-serif', whiteSpace:'pre-wrap' }}>
-                            {p.answer || <em style={{ opacity:0.35 }}>No answer written</em>}
-                          </p>
+                      {!expanded && !editing && preview && (
+                        <p style={{ color:'rgba(245,239,230,0.35)', fontSize:'0.79rem', fontFamily:'Inter, sans-serif', lineHeight:1.5, padding:'0 16px 12px', margin:0, overflow:'hidden', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical' }}>{preview}</p>
+                      )}
+                      {expanded && (
+                        <div style={{ padding:'0 16px 16px', borderTop:'0.5px solid rgba(245,239,230,0.07)' }} onClick={e=>e.stopPropagation()}>
+                          {!editing && (
+                            <div style={{ display:'flex', gap:'10px', alignItems:'center', justifyContent:'flex-end', paddingTop:'10px', marginBottom:'12px' }}>
+                              {calDelConfirm===id ? (
+                                <>
+                                  <span style={{ color:'rgba(245,239,230,0.45)', fontSize:'0.74rem', fontFamily:'Inter, sans-serif' }}>Delete?</span>
+                                  <button onClick={()=>handleDeleteEntry(id)} style={{ background:'none', border:'none', color:'#e8987a', fontSize:'0.74rem', cursor:'pointer', fontFamily:'Inter, sans-serif' }}>Confirm</button>
+                                  <button onClick={()=>setCalDelConfirm(null)} style={{ background:'none', border:'none', color:'rgba(245,239,230,0.35)', fontSize:'0.74rem', cursor:'pointer', fontFamily:'Inter, sans-serif' }}>Cancel</button>
+                                </>
+                              ) : (
+                                <>
+                                  {isCheckin && <button onClick={()=>enterEditMode(entry)} style={{ background:'none', border:'none', color:'rgba(245,239,230,0.35)', fontSize:'0.74rem', cursor:'pointer', fontFamily:'Inter, sans-serif' }}>Edit</button>}
+                                  <button onClick={()=>handleDeleteEntry(id)} style={{ background:'none', border:'none', color:'rgba(245,239,230,0.22)', fontSize:'0.74rem', cursor:'pointer', fontFamily:'Inter, sans-serif' }}>Delete</button>
+                                </>
+                              )}
+                            </div>
+                          )}
+                          {editing && editData ? (
+                            <div style={{ paddingTop:'8px' }}>
+                              <div style={{ display:'flex', flexDirection:'column', gap:'6px', marginBottom:'12px' }}>
+                                {[{value:'drained',emoji:'🪫',label:'Completely drained'},{value:'tired',emoji:'😴',label:'Tired but okay'},{value:'neutral',emoji:'😐',label:'Neutral'},{value:'good',emoji:'✨',label:'Surprisingly good'}].map(opt=>(
+                                  <button key={opt.value} onClick={()=>setEditData(d=>({...d,energyLevel:opt.value}))}
+                                    style={{ display:'flex', alignItems:'center', gap:'10px', background:editData.energyLevel===opt.value?'rgba(196,113,79,0.18)':'rgba(245,239,230,0.04)', border:editData.energyLevel===opt.value?'1px solid rgba(196,113,79,0.5)':'1px solid rgba(245,239,230,0.1)', borderRadius:'10px', padding:'9px 13px', cursor:'pointer', textAlign:'left', transition:'all 0.15s' }}>
+                                    <span style={{ fontSize:'1rem' }}>{opt.emoji}</span><span style={{ color:editData.energyLevel===opt.value?'#f5efe6':'rgba(245,239,230,0.55)', fontSize:'0.84rem', fontFamily:'Inter, sans-serif' }}>{opt.label}</span>
+                                  </button>
+                                ))}
+                              </div>
+                              <div style={{ display:'flex', flexDirection:'column', gap:'6px', marginBottom:'16px' }}>
+                                {[{value:'overstimulated',emoji:'🌀',label:'Overstimulated'},{value:'foggy',emoji:'🌫️',label:'Foggy and kind of blank'},{value:'clear',emoji:'🙂',label:'Clear enough'}].map(opt=>(
+                                  <button key={opt.value} onClick={()=>setEditData(d=>({...d,mentalState:opt.value}))}
+                                    style={{ display:'flex', alignItems:'center', gap:'10px', background:editData.mentalState===opt.value?'rgba(196,113,79,0.18)':'rgba(245,239,230,0.04)', border:editData.mentalState===opt.value?'1px solid rgba(196,113,79,0.5)':'1px solid rgba(245,239,230,0.1)', borderRadius:'10px', padding:'9px 13px', cursor:'pointer', textAlign:'left', transition:'all 0.15s' }}>
+                                    <span style={{ fontSize:'1rem' }}>{opt.emoji}</span><span style={{ color:editData.mentalState===opt.value?'#f5efe6':'rgba(245,239,230,0.55)', fontSize:'0.84rem', fontFamily:'Inter, sans-serif' }}>{opt.label}</span>
+                                  </button>
+                                ))}
+                              </div>
+                              <div style={{ display:'flex', flexDirection:'column', gap:'14px', marginBottom:'16px' }}>
+                                {editData.prompts.map((p,i)=>(
+                                  <div key={i}>
+                                    <p className="font-serif" style={{ color:'rgba(245,239,230,0.48)', fontSize:'0.87rem', fontStyle:'italic', marginBottom:'5px' }}>{p.question}</p>
+                                    <textarea value={p.answer} onChange={e=>setEditData(d=>({...d,prompts:d.prompts.map((pr,j)=>j===i?{...pr,answer:e.target.value}:pr)}))}
+                                      style={{ width:'100%', boxSizing:'border-box', background:'rgba(245,239,230,0.06)', border:'1px solid rgba(245,239,230,0.12)', borderRadius:'10px', padding:'11px', color:'#f5efe6', fontSize:'0.88rem', lineHeight:1.6, resize:'vertical', outline:'none', minHeight:'80px', fontFamily:'Inter, sans-serif' }} />
+                                  </div>
+                                ))}
+                              </div>
+                              <textarea value={editData.notes||''} onChange={e=>setEditData(d=>({...d,notes:e.target.value}))} placeholder="Notes..."
+                                style={{ width:'100%', boxSizing:'border-box', background:'rgba(245,239,230,0.06)', border:'1px solid rgba(245,239,230,0.12)', borderRadius:'10px', padding:'11px', color:'#f5efe6', fontSize:'0.88rem', lineHeight:1.6, resize:'vertical', outline:'none', minHeight:'70px', fontFamily:'Inter, sans-serif', marginBottom:'12px' }} />
+                              <div style={{ display:'flex', gap:'10px' }}>
+                                <button onClick={()=>handleSaveEdit(entry)} style={{ flex:1, background:'#c4714f', color:'#f5efe6', border:'none', borderRadius:'12px', padding:'12px', fontSize:'0.88rem', fontWeight:600, cursor:'pointer', fontFamily:'Inter, sans-serif' }}>Save</button>
+                                <button onClick={()=>{setCalEditingId(null);setEditData(null);}} style={{ flex:1, background:'transparent', color:'rgba(245,239,230,0.5)', border:'1px solid rgba(245,239,230,0.15)', borderRadius:'12px', padding:'12px', fontSize:'0.88rem', cursor:'pointer', fontFamily:'Inter, sans-serif' }}>Cancel</button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div>
+                              {isCheckin && (entry.energyLevel||entry.mentalState) && (
+                                <div style={{ display:'flex', gap:'7px', flexWrap:'wrap', marginBottom:'14px' }}>
+                                  {entry.energyLevel && (() => { const t=ENERGY_TINTS[entry.energyLevel]; return <span style={{ background:t?t.bg:'rgba(245,239,230,0.07)', color:t?t.text:'rgba(245,239,230,0.65)', borderRadius:'20px', padding:'4px 11px', fontSize:'0.79rem', fontFamily:'Inter, sans-serif', border:t?`1px solid ${t.text}30`:'none' }}>{energyEmoji[entry.energyLevel]} {energyLabel[entry.energyLevel]}</span>; })()}
+                                  {entry.mentalState && <span style={{ background:'rgba(245,239,230,0.07)', borderRadius:'20px', padding:'4px 11px', fontSize:'0.79rem', color:'rgba(245,239,230,0.6)', fontFamily:'Inter, sans-serif' }}>{mentalEmoji[entry.mentalState]} {mentalLabel[entry.mentalState]}</span>}
+                                  {entry.emotionTone && <span style={{ background:'rgba(245,239,230,0.07)', borderRadius:'20px', padding:'4px 11px', fontSize:'0.79rem', color:'rgba(245,239,230,0.6)', fontFamily:'Inter, sans-serif' }}>{emotionEmoji[entry.emotionTone]} {emotionLabel[entry.emotionTone]}</span>}
+                                  {entry.stressIntensity && <span style={{ background:'rgba(245,239,230,0.07)', borderRadius:'20px', padding:'4px 11px', fontSize:'0.79rem', color:'rgba(245,239,230,0.6)', fontFamily:'Inter, sans-serif' }}>{stressEmoji[entry.stressIntensity]} {stressLabel[entry.stressIntensity]}</span>}
+                                </div>
+                              )}
+                              {isCheckin && (
+                                <div style={{ display:'flex', flexDirection:'column', gap:'14px' }}>
+                                  {(entry.prompts||[]).map((p,i)=>(
+                                    <div key={i}>
+                                      <p className="font-serif" style={{ color:'rgba(245,239,230,0.48)', fontSize:'0.87rem', fontStyle:'italic', marginBottom:'4px' }}>{p.question}</p>
+                                      <p style={{ color:'#f5efe6', fontSize:'0.9rem', lineHeight:1.65, fontFamily:'Inter, sans-serif', whiteSpace:'pre-wrap' }}>{p.answer||<em style={{opacity:0.35}}>No answer written</em>}</p>
+                                    </div>
+                                  ))}
+                                  {entry.notes && (<><div style={{ borderTop:'0.5px solid rgba(245,239,230,0.08)', margin:'14px 0 10px' }} /><p style={{ color:'rgba(245,239,230,0.65)', fontSize:'0.88rem', lineHeight:1.6, fontFamily:'Inter, sans-serif', whiteSpace:'pre-wrap' }}>{entry.notes}</p></>)}
+                                  {entry.recommendedActivity && (<><div style={{ borderTop:'0.5px solid rgba(245,239,230,0.08)', margin:'14px 0 10px' }} /><p style={{ color:'rgba(245,239,230,0.36)', fontSize:'0.79rem', fontFamily:'Inter, sans-serif' }}>Chose that day: {entry.recommendedActivity.emoji} {entry.recommendedActivity.name}</p></>)}
+                                </div>
+                              )}
+                              {!isCheckin && (
+                                <div style={{ display:'flex', flexDirection:'column', gap:'12px' }}>
+                                  {(entry.emotionalFlow||[]).map((f,i)=>f.answer?<div key={i}><p style={{ color:'#f5efe6', fontSize:'0.9rem', lineHeight:1.65, fontFamily:'Inter, sans-serif', whiteSpace:'pre-wrap' }}>{f.answer}</p></div>:null)}
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
-                      ))}
+                      )}
                     </div>
-                    {selectedEntry.notes && (
-                      <>
-                        <div style={{ borderTop:'0.5px solid rgba(245,239,230,0.08)', margin:'16px 0 12px' }} />
-                        <p style={{ color:'rgba(245,239,230,0.32)', fontSize:'0.7rem', fontWeight:600, letterSpacing:'0.08em', textTransform:'uppercase', fontFamily:'Inter, sans-serif', marginBottom:'6px' }}>Notes</p>
-                        <p style={{ color:'rgba(245,239,230,0.65)', fontSize:'0.88rem', lineHeight:1.6, fontFamily:'Inter, sans-serif', whiteSpace:'pre-wrap' }}>{selectedEntry.notes}</p>
-                      </>
-                    )}
-                    {selectedEntry.recommendedActivity && (
-                      <>
-                        <div style={{ borderTop:'0.5px solid rgba(245,239,230,0.08)', margin:'16px 0 12px' }} />
-                        <p style={{ color:'rgba(245,239,230,0.36)', fontSize:'0.79rem', fontFamily:'Inter, sans-serif' }}>
-                          Chose that night: {selectedEntry.recommendedActivity.emoji} {selectedEntry.recommendedActivity.name}
-                        </p>
-                      </>
-                    )}
-                  </div>
-                )}
+                  );
+                })}
               </div>
             ) : (
               <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'36px 20px', opacity:0.28 }}>
@@ -3303,8 +3831,9 @@
       const lastEntry = (() => {
         for (let i = 1; i <= 7; i++) {
           const d = new Date(); d.setDate(d.getDate() - i);
-          const key = `journal_${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-          try { const s = localStorage.getItem(key); if (s) return JSON.parse(s); } catch {}
+          const ds = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+          const e = loadJournalEntry(ds);
+          if (e) return e;
         }
         return null;
       })();
@@ -3324,7 +3853,7 @@
       }
 
       function handleWrite() {
-        transition(() => setScreen('journal'));
+        transition(() => setScreen('flowSelector'));
       }
 
       function handleSkip() {
@@ -3474,17 +4003,31 @@
                     onGetRecommendation={() => transition(() => { setAnswers({}); setCurrentQ(0); setScreen('questions'); })}
                   />
                 )}
+                {screen === 'flowSelector' && (
+                  <FlowSelectorScreen
+                    onCheckin={() => transition(() => setScreen('journal'))}
+                    onEmotional={() => transition(() => setScreen('emotionalFlow'))}
+                    onBack={() => transition(() => setScreen('today'))}
+                  />
+                )}
+                {screen === 'emotionalFlow' && (
+                  <EmotionalFlowScreen
+                    onDone={() => transition(() => setScreen('calendar'))}
+                    onBack={() => transition(() => setScreen('flowSelector'))}
+                    onFindActivity={() => transition(() => { setAnswers({}); setCurrentQ(0); setScreen('questions'); })}
+                  />
+                )}
                 {screen === 'journal' && (
                   <JournalScreen
                     onDone={() => transition(() => setScreen('calendar'))}
-                    onBack={() => transition(() => setScreen('today'))}
+                    onBack={() => transition(() => setScreen('flowSelector'))}
                     onFindActivity={handleFindActivityFromJournal}
                   />
                 )}
                 {screen === 'calendar' && (
                   <CalendarScreen
                     onBack={() => transition(() => setScreen('today'))}
-                    onWrite={() => transition(() => setScreen('journal'))}
+                    onWrite={() => transition(() => setScreen('flowSelector'))}
                   />
                 )}
               </>
@@ -3496,6 +4039,16 @@
 
     const root = ReactDOM.createRoot(document.getElementById('root'));
     root.render(<App />);
+  </script>
+  <script>
+    (function() {
+      var overlay = document.getElementById('loading-overlay');
+      if (!overlay) return;
+      setTimeout(function() {
+        overlay.style.opacity = '0';
+        setTimeout(function() { if (overlay.parentNode) overlay.parentNode.removeChild(overlay); }, 600);
+      }, 2000);
+    })();
   </script>
 </body>
 </html>
