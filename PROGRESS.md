@@ -279,6 +279,23 @@ write          · Write something
 
 ---
 
+## Feature flags
+
+### `SHOW_ACTIVITIES` (currently `false`)
+Defined at the top of the `<script type="text/babel">` block in `index.html`, just before the `App()` function.
+
+When `false`, the following are hidden (not removed):
+- **Activities tab** in the top nav bar
+- **"Find an activity for today →"** ghost button on the Today tab CTA card
+- **"Find an activity for today →"** button on the EmotionalFlowScreen closing screen
+- **"Find an activity for today →"** button on the JournalScreen check-in closing screen
+- **`handleFindActivityFromJournal`** redirect to the 3-question quiz (guarded with early return)
+
+The Activities page component, all activity-related code, localStorage data, and logic remain intact.
+To restore everything: change `const SHOW_ACTIVITIES = false;` → `const SHOW_ACTIVITIES = true;`.
+
+---
+
 ## What's not in the current build
 
 - Mood trend visualization in calendar
