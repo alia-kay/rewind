@@ -1067,50 +1067,56 @@
     function getTimeWord() { return new Date().getHours() >= 17 ? 'tonight' : 'today'; }
 
     // ─────────────────────────────────────────────
-    //  TOP NAV
+    //  BRAND HEADER (decorative, not nav)
     // ─────────────────────────────────────────────
-    function TopNav({ screen, onNav }) {
-      const now = new Date();
-      const dateStr = now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-
-      const isHome       = ['today','questions','results','flowSelector','emotionalFlow'].includes(screen);
-      const isJournal    = screen === 'calendar';
-      const isActivities = screen === 'activities';
-
-      const navBtn = (active, label, id) => (
-        <button
-          key={id}
-          onClick={() => onNav(id)}
-          style={{
-            background: 'none', border: 'none',
-            color: active ? '#f5efe6' : 'rgba(245,239,230,0.42)',
-            fontFamily: 'Inter, sans-serif', fontSize: '0.875rem',
-            fontWeight: active ? 600 : 400, cursor: 'pointer',
-            padding: '0 0 3px 0', transition: 'color 0.2s',
-            borderBottom: active ? '2px solid #c4714f' : '2px solid transparent',
-          }}
-        >{label}</button>
-      );
-
+    function BrandHeader() {
       return (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, height: '56px',
-          background: 'rgba(26,26,46,0.96)', backdropFilter: 'blur(12px)',
-          borderBottom: '1px solid rgba(245,239,230,0.08)',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '0 24px', zIndex: 100,
-        }}>
-          <button onClick={() => onNav('today')} style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: '110px', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-            <CandleFlame width={20} height={26} />
-            <span className="font-serif" style={{ color: '#f5efe6', fontSize: '0.9rem', fontWeight: 600 }}>unwind</span>
+        <div style={{ padding: '20px 24px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <CandleFlame width={18} height={24} />
+          <span className="font-serif" style={{ color: 'rgba(245,239,230,0.6)', fontSize: '0.85rem', fontWeight: 600 }}>unwind</span>
+        </div>
+      );
+    }
+
+    // ─────────────────────────────────────────────
+    //  BOTTOM NAV
+    // ─────────────────────────────────────────────
+    function BottomNav({ tab, onTabChange, onWrite }) {
+      const ic = (id) => ({ color: tab === id ? '#e8987a' : 'rgba(245,239,230,0.35)', display:'flex', alignItems:'center', justifyContent:'center' });
+      const lc = (id) => ({ fontSize:'11px', fontFamily:'Inter, sans-serif', color: tab === id ? '#e8987a' : 'rgba(245,239,230,0.32)', fontWeight: tab === id ? 600 : 400 });
+      const bs = { display:'flex', flexDirection:'column', alignItems:'center', gap:'4px', background:'none', border:'none', cursor:'pointer', padding:'6px 4px 8px', flex:1 };
+      return (
+        <div style={{ position:'fixed', bottom:0, left:0, right:0, height:'64px', background:'rgba(26,26,46,0.97)', backdropFilter:'blur(16px)', borderTop:'0.5px solid rgba(245,239,230,0.09)', display:'flex', alignItems:'center', zIndex:100 }}>
+
+          <button style={bs} onClick={() => onTabChange('today')}>
+            <span style={ic('today')}><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><circle cx="9" cy="7.5" r="2.5"/><path d="M3.5 15.5c0-3 2.5-5 5.5-5s5.5 2 5.5 5"/></svg></span>
+            <span style={lc('today')}>Today</span>
           </button>
-          <div style={{ display: 'flex', gap: '28px', alignItems: 'center' }}>
-            {navBtn(isHome,       'Today',      'today')}
-            {navBtn(isJournal,    'Journal',    'journal')}
+
+          <button style={bs} onClick={() => onTabChange('intentions')}>
+            <span style={ic('intentions')}><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="9" cy="9" r="6.5"/><circle cx="9" cy="9" r="2.5"/></svg></span>
+            <span style={lc('intentions')}>Intentions</span>
+          </button>
+
+          <div style={{ flex:1, display:'flex', justifyContent:'center', alignItems:'center' }}>
+            <button onClick={onWrite} style={{ width:'52px', height:'52px', borderRadius:'50%', background:'#c4714f', border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 4px 18px rgba(196,113,79,0.4)', transform:'translateY(-10px)', flexShrink:0, transition:'background 0.2s' }}
+              onMouseEnter={e => e.currentTarget.style.background='#a35a3a'}
+              onMouseLeave={e => e.currentTarget.style.background='#c4714f'}
+            >
+              <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><line x1="11" y1="4" x2="11" y2="18" stroke="#f5efe6" strokeWidth="2.2" strokeLinecap="round"/><line x1="4" y1="11" x2="18" y2="11" stroke="#f5efe6" strokeWidth="2.2" strokeLinecap="round"/></svg>
+            </button>
           </div>
-          <div className="nav-date" style={{ color: 'rgba(245,239,230,0.32)', fontSize: '0.75rem', fontFamily: 'Inter, sans-serif', minWidth: '110px', textAlign: 'right' }}>
-            {dateStr}
-          </div>
+
+          <button style={bs} onClick={() => onTabChange('reviews')}>
+            <span style={ic('reviews')}><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="9" r="6.5"/><path d="M5.5 9l2.5 2.5 4.5-5"/></svg></span>
+            <span style={lc('reviews')}>Reviews</span>
+          </button>
+
+          <button style={bs} onClick={() => onTabChange('history')}>
+            <span style={ic('history')}><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><circle cx="9" cy="9" r="6.5"/><path d="M9 5.5V9L11.5 11"/></svg></span>
+            <span style={lc('history')}>History</span>
+          </button>
+
         </div>
       );
     }
@@ -1145,7 +1151,7 @@
       const emotionLabel = { anxious:'Anxious', overwhelmed:'Overwhelmed', sad:'Sad', irritated:'Irritated', calm:'Calm', good:'Good', hopeful:'Hopeful' };
       const stressEmoji  = { low:'🌿', medium:'🌤️', high:'🔥' };
       const stressLabel  = { low:'Low intensity', medium:'Medium intensity', high:'High intensity' };
-      const ENERGY_TINTS = { good:{bg:'#D6ECD2',text:'#2E6B27'}, neutral:{bg:'#FAE8D0',text:'#854F0B'}, tired:{bg:'#FAE8D0',text:'#854F0B'}, drained:{bg:'#F5DDD8',text:'#712B13'} };
+      const ENERGY_TINTS = { good:{bg:'rgba(76,130,70,0.18)',text:'#4A7A45'}, neutral:{bg:'rgba(160,110,50,0.18)',text:'#8A6030'}, tired:{bg:'rgba(160,110,50,0.18)',text:'#8A6030'}, drained:{bg:'rgba(140,70,60,0.18)',text:'#7A4040'} };
 
       function reload() { setEntries(loadJournalEntries(today)); }
 
@@ -1305,7 +1311,7 @@
 
       return (
         <div className="fade-in" style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
-          <div className="today-container" style={{ width: '100%', maxWidth: '680px', padding: '32px 24px 60px', boxSizing: 'border-box' }}>
+          <div className="today-container" style={{ width: '100%', maxWidth: '680px', padding: '24px 24px 88px', boxSizing: 'border-box' }}>
 
             {/* Greeting + date */}
             <div style={{ marginBottom: '28px' }}>
@@ -1345,11 +1351,6 @@
                     onMouseEnter={e=>{e.currentTarget.style.background='#a35a3a';e.currentTarget.style.transform='scale(1.02)';}}
                     onMouseLeave={e=>{e.currentTarget.style.background='#c4714f';e.currentTarget.style.transform='scale(1)';}}
                   >Write in Journal →</button>
-                  <button onClick={onSkip}
-                    style={{ background:'transparent', color:'rgba(245,239,230,0.45)', border:'1px solid rgba(245,239,230,0.15)', borderRadius:'14px', padding:'12px 28px', fontSize:'0.9rem', fontWeight:500, cursor:'pointer', fontFamily:'Inter, sans-serif', transition:'all 0.2s ease', display:'block', width:'100%' }}
-                    onMouseEnter={e=>{e.currentTarget.style.borderColor='rgba(245,239,230,0.3)';e.currentTarget.style.color='rgba(245,239,230,0.7)';}}
-                    onMouseLeave={e=>{e.currentTarget.style.borderColor='rgba(245,239,230,0.15)';e.currentTarget.style.color='rgba(245,239,230,0.45)';}}
-                  >Find an activity for {getTimeWord()} →</button>
                 </div>
 
                 {/* Divider */}
@@ -2863,7 +2864,7 @@
     // ─────────────────────────────────────────────
     //  CALENDAR SCREEN
     // ─────────────────────────────────────────────
-    function CalendarScreen({ onBack, onWrite }) {
+    function CalendarScreen({ currentTab }) {
       const now = new Date();
 
       // ── Existing calendar state (unchanged) ──────
@@ -2895,9 +2896,6 @@
       const [reviewSaved,     setReviewSaved]     = useState(false);
       const [reviewExitAsk,   setReviewExitAsk]   = useState(false);
 
-      // ── Left panel sub-tab ────────────────────────
-      const isMobile = window.innerWidth < 768;
-      const [leftTab, setLeftTab] = useState(isMobile ? 'calendar' : 'intentions');
 
       // ── Left/right column month navigators ────────
       const [intNavYear,  setIntNavYear]  = useState(now.getFullYear());
@@ -2907,6 +2905,18 @@
 
       // ── Force re-read of intentions/reviews ───────
       const [intRefresh,  setIntRefresh]  = useState(0);
+
+      // ── Auto-select today on History tab ──────────
+      const historyAutoSelectedRef = useRef(false);
+      useEffect(() => {
+        if (currentTab === 'history' && !historyAutoSelectedRef.current) {
+          historyAutoSelectedRef.current = true;
+          const todayEntries = loadJournalEntries(today);
+          if (todayEntries.length > 0 && now.getFullYear() === calYear && now.getMonth() === calMonth) {
+            setSelectedDay(now.getDate());
+          }
+        }
+      }, [currentTab]);
 
       // ── Review intent key ─────────────────────────
       const [reviewIntKey, setReviewIntKey] = useState(null);
@@ -3047,10 +3057,10 @@
 
       // ── Energy tints for calendar cells ───────────
       const ENERGY_TINTS = {
-        good:    { bg: '#D6ECD2', text: '#2E6B27', label: 'Good' },
-        neutral: { bg: '#FAE8D0', text: '#854F0B', label: 'Okay' },
-        tired:   { bg: '#FAE8D0', text: '#854F0B', label: 'Tired' },
-        drained: { bg: '#F5DDD8', text: '#712B13', label: 'Low'  },
+        good:    { bg: 'rgba(76,130,70,0.18)',   text: '#4A7A45', label: 'Good'  },
+        neutral: { bg: 'rgba(160,110,50,0.18)',  text: '#8A6030', label: 'Okay'  },
+        tired:   { bg: 'rgba(160,110,50,0.18)',  text: '#8A6030', label: 'Tired' },
+        drained: { bg: 'rgba(140,70,60,0.18)',   text: '#7A4040', label: 'Low'   },
       };
 
       // ── Review data ───────────────────────────────
@@ -3154,7 +3164,7 @@
         const cur    = reviewAnswers[reviewStep] || {};
 
         return (
-          <div style={{ position: 'absolute', inset: 0, background: '#1a1a2e', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: '32px 24px', opacity: reviewFading ? 0 : 1, transition: 'opacity 0.2s ease' }}>
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: '64px', background: '#1a1a2e', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: '32px 24px', opacity: reviewFading ? 0 : 1, transition: 'opacity 0.2s ease' }}>
             {/* Exit button top-right */}
             <button onClick={requestExitReview} style={{ position: 'absolute', top: '18px', right: '20px', background: 'none', border: 'none', color: 'rgba(245,239,230,0.3)', fontSize: '1.2rem', cursor: 'pointer', lineHeight: 1, padding: '4px 8px', transition: 'color 0.2s' }}
               onMouseEnter={e => e.currentTarget.style.color='rgba(245,239,230,0.65)'}
@@ -3268,251 +3278,43 @@
       function nextRevMonth() { if(revNavMonth===11){setRevNavYear(y=>y+1);setRevNavMonth(0);}else setRevNavMonth(m=>m+1); }
 
       return (
-        <div style={{ width:'100%', height:'calc(100vh - 56px)', display:'flex', position:'relative', overflow:'hidden' }}>
+        <div style={{ width:'100%', position:'relative' }}>
 
-          {/* ── Left panel ── */}
-          <div className="journal-left-panel" style={{ width:'400px', flexShrink:0, borderRight:'0.5px solid rgba(245,239,230,0.08)', display:'flex', flexDirection:'column', overflow:'hidden' }}>
-
-            {/* Sub-tabs — desktop shows Intentions·Reviews; mobile adds Calendar as first */}
-            <div style={{ display:'flex', borderBottom:'0.5px solid rgba(245,239,230,0.08)', padding:'0 18px', flexShrink:0 }}>
-              {/* Calendar tab — mobile only */}
-              <button className="journal-mobile-tabs" onClick={()=>setLeftTab('calendar')}
-                style={{ background:'none', border:'none', borderBottom:leftTab==='calendar'?'2px solid #c4714f':'2px solid transparent', color:leftTab==='calendar'?'#f5efe6':'rgba(245,239,230,0.42)', fontFamily:'Inter, sans-serif', fontSize:'0.875rem', fontWeight:leftTab==='calendar'?600:400, cursor:'pointer', padding:'14px 20px 12px', transition:'all 0.2s', marginRight:'4px', alignItems:'center' }}
-              >Calendar</button>
-              {['intentions','reviews'].map(tab => (
-                <button key={tab} onClick={()=>setLeftTab(tab)}
-                  style={{ background:'none', border:'none', borderBottom:leftTab===tab?'2px solid #c4714f':'2px solid transparent', color:leftTab===tab?'#f5efe6':'rgba(245,239,230,0.42)', fontFamily:'Inter, sans-serif', fontSize:'0.875rem', fontWeight:leftTab===tab?600:400, cursor:'pointer', padding:'14px 20px 12px', transition:'all 0.2s', marginRight:'4px' }}
-                >{tab==='intentions'?'Intentions':'Reviews'}</button>
-              ))}
+          {/* ── Intentions ── */}
+          {currentTab === 'intentions' && (
+          <div style={{ maxWidth:'600px', width:'100%', margin:'0 auto', padding:'16px 20px 88px', boxSizing:'border-box' }}>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'16px' }}>
+              <span className="font-serif text-cream" style={{ fontSize:'1rem', fontWeight:600 }}>Intentions</span>
+              <NavArrows onPrev={prevIntMonth} onNext={nextIntMonth} label={`${MONTH_NAMES[intNavMonth].slice(0,3)} ${intNavYear}`} />
             </div>
-
-            {/* Tab content */}
-            <div style={{ overflowY:'auto', flex:1, padding:'18px 16px' }}>
-
-              {leftTab === 'calendar' && (
-                <div>
-                  {/* Calendar header */}
-                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'12px' }}>
-                    <h2 className="font-serif text-cream" style={{ fontSize:'1rem', fontWeight:600, margin:0 }}>Journal</h2>
-                    <div style={{ display:'flex', alignItems:'center', gap:'6px' }}>
-                      <button onClick={prevMonth} style={{ background:'rgba(245,239,230,0.07)', border:'none', color:'#f5efe6', borderRadius:'8px', padding:'4px 9px', cursor:'pointer', fontSize:'1rem', transition:'background 0.2s' }}>‹</button>
-                      <span className="font-serif text-cream" style={{ fontSize:'0.84rem', fontWeight:600, minWidth:'100px', textAlign:'center' }}>{MONTH_NAMES[calMonth]} {calYear}</span>
-                      <button onClick={nextMonth} style={{ background:'rgba(245,239,230,0.07)', border:'none', color:'#f5efe6', borderRadius:'8px', padding:'4px 9px', cursor:'pointer', fontSize:'1rem', transition:'background 0.2s' }}>›</button>
-                    </div>
-                  </div>
-                  {/* Day headers */}
-                  <div style={{ display:'grid', gridTemplateColumns:'repeat(7, 1fr)', gap:'3px', marginBottom:'3px' }}>
-                    {DAY_NAMES.map(d => (
-                      <div key={d} style={{ textAlign:'center', color:'rgba(245,239,230,0.28)', fontSize:'0.65rem', fontWeight:600, letterSpacing:'0.04em', padding:'3px 0' }}>{d}</div>
-                    ))}
-                  </div>
-                  {/* Calendar grid */}
-                  <div style={{ display:'grid', gridTemplateColumns:'repeat(7, 1fr)', gap:'3px', marginBottom:'12px' }}>
-                    {cells.map((day, idx) => {
-                      if (!day) return <div key={`empty-${idx}`} />;
-                      const ds       = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-                      const entry    = loadJournalEntry(ds);
-                      const hasEntry = entryDates.has(ds) || !!entry;
-                      const isToday  = ds === today;
-                      const isSel    = day === selectedDay;
-                      const tint     = entry && ENERGY_TINTS[entry.energyLevel];
-                      let bg, tc, sub;
-                      if (isToday)   { bg='rgba(58,38,26,0.75)'; tc='#f5efe6'; sub='today'; }
-                      else if (tint) { bg=tint.bg; tc=tint.text; sub=tint.label; }
-                      else           { bg='transparent'; tc=hasEntry?'rgba(245,239,230,0.55)':'rgba(245,239,230,0.2)'; sub=null; }
-                      const border  = isToday ? '1px solid rgba(212,168,83,0.4)' : isSel ? '1px solid rgba(212,168,83,0.55)' : tint ? `1px solid ${tint.text}30` : '1px solid transparent';
-                      const overlay = isSel ? 'rgba(212,168,83,0.12)' : null;
-                      return (
-                        <button key={day}
-                          onClick={()=>{ if(hasEntry||isToday){ setSelectedDay(day===selectedDay?null:day); setDeleteConfirm(false); setEditMode(false); setEditData(null); } }}
-                          style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'4px 2px', borderRadius:'9px', cursor:(hasEntry||isToday)?'pointer':'default', background:overlay?overlay:bg, border, transition:'all 0.15s', minHeight:'36px', outline:'none' }}
-                        >
-                          <span style={{ fontSize:'11px', fontWeight:isToday?700:400, color:tc, fontFamily:'Inter, sans-serif', lineHeight:1 }}>{day}</span>
-                          {sub && <span style={{ fontSize:'9px', color:tc, opacity:0.8, marginTop:'2px', fontFamily:'Inter, sans-serif', lineHeight:1 }}>{sub}</span>}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  {/* Legend */}
-                  <div style={{ display:'flex', alignItems:'center', gap:'6px', flexWrap:'wrap', paddingBottom:'12px', marginBottom:'14px', borderBottom:'0.5px solid rgba(245,239,230,0.08)' }}>
-                    <span style={{ color:'rgba(245,239,230,0.32)', fontSize:'0.65rem', fontFamily:'Inter, sans-serif' }}>Energy:</span>
-                    {(['good','neutral','tired','drained']).map(k => (
-                      <div key={k} style={{ display:'flex', alignItems:'center', gap:'3px' }}>
-                        <div style={{ width:'11px', height:'11px', borderRadius:'2px', background:ENERGY_TINTS[k].bg, border:`1px solid ${ENERGY_TINTS[k].text}45` }} />
-                        <span style={{ color:'rgba(245,239,230,0.42)', fontSize:'0.65rem', fontFamily:'Inter, sans-serif' }}>{ENERGY_TINTS[k].label}</span>
-                      </div>
-                    ))}
-                    <div style={{ display:'flex', gap:'5px', marginLeft:'auto' }}>
-                      <button onClick={exportJournal} style={{ background:'rgba(212,168,83,0.1)', color:'#d4a853', border:'1px solid rgba(212,168,83,0.2)', borderRadius:'7px', padding:'4px 9px', fontSize:'0.68rem', fontWeight:600, cursor:'pointer', fontFamily:'Inter, sans-serif' }}>Export</button>
-                      <button onClick={clearAllEntries} style={{ background:confirmClear?'rgba(232,152,122,0.12)':'rgba(245,239,230,0.04)', color:confirmClear?'#e8987a':'rgba(245,239,230,0.28)', border:confirmClear?'1px solid rgba(232,152,122,0.3)':'1px solid rgba(245,239,230,0.08)', borderRadius:'7px', padding:'4px 9px', fontSize:'0.68rem', cursor:'pointer', fontFamily:'Inter, sans-serif' }}>{confirmClear ? 'Confirm?' : 'Clear all'}</button>
-                    </div>
-                  </div>
-                  {/* Entry viewer — multi-entry */}
-                  {selectedDay && calEntries.length > 0 ? (
-                    <div className="fade-in" style={{ marginBottom:'20px' }}>
-                      <p className="font-serif" style={{ color:'#d4a853', fontSize:'0.88rem', fontWeight:600, marginBottom:'10px' }}>{formatDateNice(selectedDateStr)}</p>
-                      {calEntries.map(entry => {
-                        const id = entry.id;
-                        const expanded = calExpandedId === id;
-                        const editing  = calEditingId === id;
-                        const isCheckin = entry.flowType !== 'emotional';
-                        const flowLabel = isCheckin ? 'Check in' : 'Explore a feeling';
-                        const preview = isCheckin ? (entry.prompts||[])[0]?.answer||'' : (entry.emotionalFlow||[])[0]?.answer||'';
-                        const time = entry.createdAt ? (() => { try { return new Date(entry.createdAt).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true}).toLowerCase(); } catch { return ''; } })() : '';
-                        return (
-                          <div key={id} style={{ background:'rgba(245,239,230,0.05)', border:`1px solid ${expanded?'rgba(196,113,79,0.28)':'rgba(245,239,230,0.09)'}`, borderRadius:'13px', marginBottom:'8px', overflow:'hidden', transition:'border-color 0.2s' }}>
-                            <div onClick={() => { if (!editing) { setCalExpandedId(expanded?null:id); setCalDelConfirm(null); } }}
-                              style={{ display:'flex', alignItems:'center', gap:'6px', padding:'10px 12px', cursor:editing?'default':'pointer', userSelect:'none' }}>
-                              <span style={{ background:'rgba(196,113,79,0.15)', color:'#e8987a', borderRadius:'20px', padding:'2px 8px', fontSize:'0.65rem', fontWeight:600, fontFamily:'Inter, sans-serif', flexShrink:0 }}>{flowLabel}</span>
-                              {time && <span style={{ color:'rgba(245,239,230,0.3)', fontSize:'0.68rem', fontFamily:'Inter, sans-serif' }}>{time}</span>}
-                              {isCheckin && entry.energyLevel && (() => { const t=ENERGY_TINTS[entry.energyLevel]; return <span style={{ background:t?t.bg:'rgba(245,239,230,0.07)', color:t?t.text:'rgba(245,239,230,0.55)', borderRadius:'20px', padding:'2px 7px', fontSize:'0.65rem', fontFamily:'Inter, sans-serif' }}>{energyEmoji[entry.energyLevel]}</span>; })()}
-                              <span style={{ color:'rgba(245,239,230,0.22)', fontSize:'0.7rem', marginLeft:'auto' }}>{expanded?'∨':'›'}</span>
-                            </div>
-                            {!expanded && !editing && preview && (
-                              <p style={{ color:'rgba(245,239,230,0.35)', fontSize:'0.77rem', fontFamily:'Inter, sans-serif', lineHeight:1.5, padding:'0 12px 9px', margin:0, overflow:'hidden', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical' }}>{preview}</p>
-                            )}
-                            {expanded && (
-                              <div style={{ padding:'0 12px 12px', borderTop:'0.5px solid rgba(245,239,230,0.07)' }} onClick={e=>e.stopPropagation()}>
-                                {!editing && (
-                                  <div style={{ display:'flex', gap:'8px', alignItems:'center', justifyContent:'flex-end', paddingTop:'8px', marginBottom:'10px' }}>
-                                    {calDelConfirm===id ? (
-                                      <>
-                                        <span style={{ color:'rgba(245,239,230,0.45)', fontSize:'0.72rem', fontFamily:'Inter, sans-serif' }}>Delete?</span>
-                                        <button onClick={()=>handleDeleteEntry(id)} style={{ background:'none', border:'none', color:'#e8987a', fontSize:'0.72rem', cursor:'pointer', fontFamily:'Inter, sans-serif' }}>Confirm</button>
-                                        <button onClick={()=>setCalDelConfirm(null)} style={{ background:'none', border:'none', color:'rgba(245,239,230,0.35)', fontSize:'0.72rem', cursor:'pointer', fontFamily:'Inter, sans-serif' }}>Cancel</button>
-                                      </>
-                                    ) : (
-                                      <>
-                                        {isCheckin && <button onClick={()=>enterEditMode(entry)} style={{ background:'none', border:'none', color:'rgba(245,239,230,0.35)', fontSize:'0.72rem', cursor:'pointer', fontFamily:'Inter, sans-serif' }}>Edit</button>}
-                                        <button onClick={()=>handleDeleteEntry(id)} style={{ background:'none', border:'none', color:'rgba(245,239,230,0.22)', fontSize:'0.72rem', cursor:'pointer', fontFamily:'Inter, sans-serif' }}>Delete</button>
-                                      </>
-                                    )}
-                                  </div>
-                                )}
-                                {editing && editData ? (
-                                  <div style={{ paddingTop:'8px' }}>
-                                    <div style={{ display:'flex', flexDirection:'column', gap:'5px', marginBottom:'10px' }}>
-                                      {[{value:'drained',emoji:'🪫',label:'Completely drained'},{value:'tired',emoji:'😴',label:'Tired but okay'},{value:'neutral',emoji:'😐',label:'Neutral'},{value:'good',emoji:'✨',label:'Surprisingly good'}].map(opt=>(
-                                        <button key={opt.value} onClick={()=>setEditData(d=>({...d,energyLevel:opt.value}))}
-                                          style={{ display:'flex', alignItems:'center', gap:'9px', background:editData.energyLevel===opt.value?'rgba(196,113,79,0.18)':'rgba(245,239,230,0.04)', border:editData.energyLevel===opt.value?'1px solid rgba(196,113,79,0.5)':'1px solid rgba(245,239,230,0.1)', borderRadius:'9px', padding:'7px 11px', cursor:'pointer', textAlign:'left', transition:'all 0.15s' }}>
-                                          <span>{opt.emoji}</span><span style={{ color:editData.energyLevel===opt.value?'#f5efe6':'rgba(245,239,230,0.55)', fontSize:'0.82rem', fontFamily:'Inter, sans-serif' }}>{opt.label}</span>
-                                        </button>
-                                      ))}
-                                    </div>
-                                    <div style={{ display:'flex', flexDirection:'column', gap:'5px', marginBottom:'12px' }}>
-                                      {[{value:'overstimulated',emoji:'🌀',label:'Overstimulated'},{value:'foggy',emoji:'🌫️',label:'Foggy and kind of blank'},{value:'clear',emoji:'🙂',label:'Clear enough'}].map(opt=>(
-                                        <button key={opt.value} onClick={()=>setEditData(d=>({...d,mentalState:opt.value}))}
-                                          style={{ display:'flex', alignItems:'center', gap:'9px', background:editData.mentalState===opt.value?'rgba(196,113,79,0.18)':'rgba(245,239,230,0.04)', border:editData.mentalState===opt.value?'1px solid rgba(196,113,79,0.5)':'1px solid rgba(245,239,230,0.1)', borderRadius:'9px', padding:'7px 11px', cursor:'pointer', textAlign:'left', transition:'all 0.15s' }}>
-                                          <span>{opt.emoji}</span><span style={{ color:editData.mentalState===opt.value?'#f5efe6':'rgba(245,239,230,0.55)', fontSize:'0.82rem', fontFamily:'Inter, sans-serif' }}>{opt.label}</span>
-                                        </button>
-                                      ))}
-                                    </div>
-                                    <div style={{ display:'flex', flexDirection:'column', gap:'10px', marginBottom:'10px' }}>
-                                      {editData.prompts.map((p,i)=>(
-                                        <div key={i}>
-                                          <p className="font-serif" style={{ color:'rgba(245,239,230,0.45)', fontSize:'0.8rem', fontStyle:'italic', marginBottom:'4px' }}>{p.question}</p>
-                                          <textarea value={p.answer} onChange={e=>setEditData(d=>({...d,prompts:d.prompts.map((pr,j)=>j===i?{...pr,answer:e.target.value}:pr)}))}
-                                            style={{ width:'100%', boxSizing:'border-box', background:'rgba(245,239,230,0.06)', border:'1px solid rgba(245,239,230,0.12)', borderRadius:'9px', padding:'9px', color:'#f5efe6', fontSize:'0.82rem', lineHeight:1.6, resize:'vertical', outline:'none', minHeight:'60px', fontFamily:'Inter, sans-serif' }} />
-                                        </div>
-                                      ))}
-                                    </div>
-                                    <textarea value={editData.notes||''} onChange={e=>setEditData(d=>({...d,notes:e.target.value}))} placeholder="Notes..."
-                                      style={{ width:'100%', boxSizing:'border-box', background:'rgba(245,239,230,0.06)', border:'1px solid rgba(245,239,230,0.12)', borderRadius:'9px', padding:'9px', color:'#f5efe6', fontSize:'0.82rem', lineHeight:1.6, resize:'vertical', outline:'none', minHeight:'50px', fontFamily:'Inter, sans-serif', marginBottom:'10px' }} />
-                                    <div style={{ display:'flex', gap:'8px' }}>
-                                      <button onClick={()=>handleSaveEdit(entry)} style={{ flex:1, background:'#c4714f', color:'#f5efe6', border:'none', borderRadius:'10px', padding:'9px', fontSize:'0.82rem', fontWeight:600, cursor:'pointer', fontFamily:'Inter, sans-serif' }}>Save</button>
-                                      <button onClick={()=>{setCalEditingId(null);setEditData(null);}} style={{ flex:1, background:'transparent', color:'rgba(245,239,230,0.5)', border:'1px solid rgba(245,239,230,0.15)', borderRadius:'10px', padding:'9px', fontSize:'0.82rem', cursor:'pointer', fontFamily:'Inter, sans-serif' }}>Cancel</button>
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <div>
-                                    {isCheckin && (entry.energyLevel||entry.mentalState) && (
-                                      <div style={{ display:'flex', gap:'5px', flexWrap:'wrap', marginBottom:'10px' }}>
-                                        {entry.energyLevel && (() => { const t=ENERGY_TINTS[entry.energyLevel]; return <span style={{ background:t?t.bg:'rgba(245,239,230,0.07)', color:t?t.text:'rgba(245,239,230,0.65)', borderRadius:'20px', padding:'3px 9px', fontSize:'0.73rem', fontFamily:'Inter, sans-serif' }}>{energyEmoji[entry.energyLevel]} {energyLabel[entry.energyLevel]}</span>; })()}
-                                        {entry.mentalState && <span style={{ background:'rgba(245,239,230,0.07)', borderRadius:'20px', padding:'3px 9px', fontSize:'0.73rem', color:'rgba(245,239,230,0.6)', fontFamily:'Inter, sans-serif' }}>{mentalEmoji[entry.mentalState]} {mentalLabel[entry.mentalState]}</span>}
-                                      </div>
-                                    )}
-                                    {isCheckin && (
-                                      <div style={{ display:'flex', flexDirection:'column', gap:'10px' }}>
-                                        {(entry.prompts||[]).map((p,i)=>(
-                                          <div key={i}>
-                                            <p className="font-serif" style={{ color:'rgba(245,239,230,0.45)', fontSize:'0.8rem', fontStyle:'italic', marginBottom:'3px' }}>{p.question}</p>
-                                            <p style={{ color:'#f5efe6', fontSize:'0.84rem', lineHeight:1.6, fontFamily:'Inter, sans-serif', whiteSpace:'pre-wrap' }}>{p.answer||<em style={{opacity:0.35}}>No answer</em>}</p>
-                                          </div>
-                                        ))}
-                                        {entry.notes && (<><div style={{ borderTop:'0.5px solid rgba(245,239,230,0.08)', margin:'10px 0 6px' }} /><p style={{ color:'rgba(245,239,230,0.62)', fontSize:'0.82rem', lineHeight:1.6, fontFamily:'Inter, sans-serif', whiteSpace:'pre-wrap' }}>{entry.notes}</p></>)}
-                                        {entry.recommendedActivity && (<><div style={{ borderTop:'0.5px solid rgba(245,239,230,0.08)', margin:'10px 0 6px' }} /><p style={{ color:'rgba(245,239,230,0.38)', fontSize:'0.75rem', fontFamily:'Inter, sans-serif' }}>Chose that day: {entry.recommendedActivity.emoji} {entry.recommendedActivity.name}</p></>)}
-                                      </div>
-                                    )}
-                                    {!isCheckin && (
-                                      <div style={{ display:'flex', flexDirection:'column', gap:'10px' }}>
-                                        {(entry.emotionalFlow||[]).map((f,i)=>f.answer?<div key={i}><p style={{ color:'#f5efe6', fontSize:'0.84rem', lineHeight:1.6, fontFamily:'Inter, sans-serif', whiteSpace:'pre-wrap' }}>{f.answer}</p></div>:null)}
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', padding:'24px 0', opacity:0.28 }}>
-                      <div style={{ marginBottom:'6px' }}><CandleFlame width={40} height={52} /></div>
-                      <p style={{ color:'#f5efe6', fontFamily:'Inter, sans-serif', fontSize:'0.8rem' }}>Select a day to read that entry.</p>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {leftTab === 'intentions' && (
-                <div>
-                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'16px' }}>
-                    <span className="font-serif text-cream" style={{ fontSize:'1rem', fontWeight:600 }}>Intentions</span>
-                    <NavArrows onPrev={prevIntMonth} onNext={nextIntMonth} label={`${MONTH_NAMES[intNavMonth].slice(0,3)} ${intNavYear}`} />
-                  </div>
-
-                  <IntentionCard
-                    key={`${intMonthKey}-${intRefresh}`}
-                    intentionKey={intMonthKey}
-                    isMonth={true}
-                    label={`${MONTH_NAMES[intNavMonth]} intention`}
-                    onStartReview={() => startReview('month', intMonthKey, loadReviewForKey('month', intMonthKey)?.answers)}
-                  />
-
-                  {(() => {
-                    const isCurrentMonth = intNavYear === now.getFullYear() && intNavMonth === now.getMonth();
-                    const currentWeekKey = getWeekKey(now);
-                    if (isCurrentMonth) {
-                      const currentWeek = intWeeks.find(w => w.weekKey === currentWeekKey);
-                      const otherWeeks  = intWeeks.filter(w => w.weekKey !== currentWeekKey);
-                      return (
-                        <>
-                          {currentWeek && (
-                            <IntentionCard
-                              key={`${currentWeek.weekKey}-${intRefresh}`}
-                              intentionKey={currentWeek.weekKey}
-                              isMonth={false}
-                              label={`Week of ${currentWeek.label}`}
-                              onStartReview={() => startReview('week', currentWeek.weekKey, loadReviewForKey('week', currentWeek.weekKey)?.answers)}
-                            />
-                          )}
-                          {currentWeek && otherWeeks.length > 0 && (
-                            <div style={{ height:'0.5px', background:'rgba(245,239,230,0.08)', margin:'0 0 12px' }} />
-                          )}
-                          {otherWeeks.map(({ weekKey: wk, label }) => (
-                            <IntentionCard
-                              key={`${wk}-${intRefresh}`}
-                              intentionKey={wk}
-                              isMonth={false}
-                              label={`Week of ${label}`}
-                              onStartReview={() => startReview('week', wk, loadReviewForKey('week', wk)?.answers)}
-                            />
-                          ))}
-                        </>
-                      );
-                    }
-                    return intWeeks.map(({ weekKey: wk, label }) => (
+            <IntentionCard
+              key={`${intMonthKey}-${intRefresh}`}
+              intentionKey={intMonthKey}
+              isMonth={true}
+              label={`${MONTH_NAMES[intNavMonth]} intention`}
+              onStartReview={() => startReview('month', intMonthKey, loadReviewForKey('month', intMonthKey)?.answers)}
+            />
+            {(() => {
+              const isCurrentMonth = intNavYear === now.getFullYear() && intNavMonth === now.getMonth();
+              const currentWeekKey = getWeekKey(now);
+              if (isCurrentMonth) {
+                const currentWeek = intWeeks.find(w => w.weekKey === currentWeekKey);
+                const otherWeeks  = intWeeks.filter(w => w.weekKey !== currentWeekKey);
+                return (
+                  <>
+                    {currentWeek && (
+                      <IntentionCard
+                        key={`${currentWeek.weekKey}-${intRefresh}`}
+                        intentionKey={currentWeek.weekKey}
+                        isMonth={false}
+                        label={`Week of ${currentWeek.label}`}
+                        onStartReview={() => startReview('week', currentWeek.weekKey, loadReviewForKey('week', currentWeek.weekKey)?.answers)}
+                      />
+                    )}
+                    {currentWeek && otherWeeks.length > 0 && (
+                      <div style={{ height:'0.5px', background:'rgba(245,239,230,0.08)', margin:'0 0 12px' }} />
+                    )}
+                    {otherWeeks.map(({ weekKey: wk, label }) => (
                       <IntentionCard
                         key={`${wk}-${intRefresh}`}
                         intentionKey={wk}
@@ -3520,81 +3322,87 @@
                         label={`Week of ${label}`}
                         onStartReview={() => startReview('week', wk, loadReviewForKey('week', wk)?.answers)}
                       />
-                    ));
-                  })()}
-                </div>
-              )}
-
-              {leftTab === 'reviews' && (
-                <div>
-                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'16px' }}>
-                    <span className="font-serif text-cream" style={{ fontSize:'1rem', fontWeight:600 }}>Reviews</span>
-                    <NavArrows onPrev={prevRevMonth} onNext={nextRevMonth} label={`${MONTH_NAMES[revNavMonth].slice(0,3)} ${revNavYear}`} />
-                  </div>
-
-                  {/* Month review card */}
-                  {(() => {
-                    const intKey = revMonthKey;
-                    const review = loadReviewForKey('month', intKey);
-                    const hasDone = !!review;
-                    const intention = loadIntention(intKey);
-                    const hasIntention = !!(intention && (intention.sentence || intention.items?.length > 0 || intention.focusWords?.length > 0));
-                    const badge = hasDone ? { label:'Done', bg:'#D6ECD2', color:'#2E6B27' } : hasIntention ? { label:'Pending', bg:'#FAE8D0', color:'#854F0B' } : { label:'Not yet', bg:'rgba(245,239,230,0.06)', color:'rgba(245,239,230,0.35)' };
-                    return (
-                      <div key={`${revMonthKey}-${intRefresh}`} style={{ background:'rgba(196,113,79,0.07)', border:'1px solid rgba(196,113,79,0.16)', borderRadius:'13px', padding:'12px', marginBottom:'8px' }}>
-                        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'8px' }}>
-                          <span style={{ color:'rgba(245,239,230,0.42)', fontSize:'0.63rem', fontWeight:700, letterSpacing:'0.09em', textTransform:'uppercase', fontFamily:'Inter, sans-serif' }}>{MONTH_NAMES[revNavMonth]}</span>
-                          <span style={{ background:badge.bg, color:badge.color, borderRadius:'20px', padding:'2px 8px', fontSize:'0.62rem', fontFamily:'Inter, sans-serif', fontWeight:600 }}>{badge.label}</span>
-                        </div>
-                        {hasDone && review.answers && (() => {
-                          const lastQ = review.answers[Object.keys(review.answers).length - 1];
-                          const word = lastQ?.text;
-                          return word ? <p className="font-serif" style={{ color:'rgba(245,239,230,0.55)', fontSize:'0.8rem', fontStyle:'italic', marginBottom:'8px' }}>"{word}"</p> : null;
-                        })()}
-                        <button onClick={() => startReview('month', intKey, review?.answers)}
-                          style={{ width:'100%', background:'rgba(245,239,230,0.04)', border:'1px solid rgba(245,239,230,0.09)', borderRadius:'8px', color:'rgba(245,239,230,0.45)', fontSize:'0.69rem', cursor:'pointer', padding:'7px', fontFamily:'Inter, sans-serif', transition:'all 0.2s' }}
-                          onMouseEnter={e=>{e.currentTarget.style.background='rgba(245,239,230,0.08)';e.currentTarget.style.color='rgba(245,239,230,0.75)';}}
-                          onMouseLeave={e=>{e.currentTarget.style.background='rgba(245,239,230,0.04)';e.currentTarget.style.color='rgba(245,239,230,0.45)';}}
-                        >{hasDone ? 'Edit review →' : 'Start review →'}</button>
-                      </div>
-                    );
-                  })()}
-
-                  {/* Weekly review cards */}
-                  {revWeeks.map(({ weekKey: wk, label }) => {
-                    const review = loadReviewForKey('week', wk);
-                    const hasDone = !!review;
-                    const intention = loadIntention(wk);
-                    const hasIntention = !!(intention && (intention.sentence || intention.items?.length > 0 || intention.focusWords?.length > 0));
-                    const badge = hasDone ? { label:'Done', bg:'#D6ECD2', color:'#2E6B27' } : hasIntention ? { label:'Pending', bg:'#FAE8D0', color:'#854F0B' } : { label:'Not yet', bg:'rgba(245,239,230,0.06)', color:'rgba(245,239,230,0.35)' };
-                    return (
-                      <div key={`${wk}-${intRefresh}`} style={{ background:'rgba(245,239,230,0.03)', border:'1px solid rgba(245,239,230,0.07)', borderRadius:'13px', padding:'12px', marginBottom:'8px' }}>
-                        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'8px' }}>
-                          <span style={{ color:'rgba(245,239,230,0.38)', fontSize:'0.62rem', fontWeight:600, letterSpacing:'0.08em', textTransform:'uppercase', fontFamily:'Inter, sans-serif' }}>Wk of {label}</span>
-                          <span style={{ background:badge.bg, color:badge.color, borderRadius:'20px', padding:'2px 8px', fontSize:'0.62rem', fontFamily:'Inter, sans-serif', fontWeight:600 }}>{badge.label}</span>
-                        </div>
-                        {hasDone && review.answers && (() => {
-                          const lastQ = review.answers[Object.keys(review.answers).length - 1];
-                          const word = lastQ?.text;
-                          return word ? <p className="font-serif" style={{ color:'rgba(245,239,230,0.52)', fontSize:'0.77rem', fontStyle:'italic', marginBottom:'7px' }}>"{word}"</p> : null;
-                        })()}
-                        <button onClick={() => startReview('week', wk, review?.answers)}
-                          style={{ width:'100%', background:'rgba(245,239,230,0.04)', border:'1px solid rgba(245,239,230,0.08)', borderRadius:'8px', color:'rgba(245,239,230,0.4)', fontSize:'0.67rem', cursor:'pointer', padding:'6px', fontFamily:'Inter, sans-serif', transition:'all 0.2s' }}
-                          onMouseEnter={e=>{e.currentTarget.style.background='rgba(245,239,230,0.08)';e.currentTarget.style.color='rgba(245,239,230,0.72)';}}
-                          onMouseLeave={e=>{e.currentTarget.style.background='rgba(245,239,230,0.04)';e.currentTarget.style.color='rgba(245,239,230,0.4)';}}
-                        >{hasDone ? 'Edit review →' : 'Start review →'}</button>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+                    ))}
+                  </>
+                );
+              }
+              return intWeeks.map(({ weekKey: wk, label }) => (
+                <IntentionCard
+                  key={`${wk}-${intRefresh}`}
+                  intentionKey={wk}
+                  isMonth={false}
+                  label={`Week of ${label}`}
+                  onStartReview={() => startReview('week', wk, loadReviewForKey('week', wk)?.answers)}
+                />
+              ));
+            })()}
           </div>
+          )}
 
-          {/* ── Right panel: calendar + entry viewer ── */}
-          <div className="journal-desktop-right" style={{ flex:1, overflowY:'auto', padding:'18px 22px' }}>
+          {/* ── Reviews ── */}
+          {currentTab === 'reviews' && (
+          <div style={{ maxWidth:'600px', width:'100%', margin:'0 auto', padding:'16px 20px 88px', boxSizing:'border-box' }}>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'16px' }}>
+              <span className="font-serif text-cream" style={{ fontSize:'1rem', fontWeight:600 }}>Reviews</span>
+              <NavArrows onPrev={prevRevMonth} onNext={nextRevMonth} label={`${MONTH_NAMES[revNavMonth].slice(0,3)} ${revNavYear}`} />
+            </div>
+            {(() => {
+              const intKey = revMonthKey;
+              const review = loadReviewForKey('month', intKey);
+              const hasDone = !!review;
+              const intention = loadIntention(intKey);
+              const hasIntention = !!(intention && (intention.sentence || intention.items?.length > 0 || intention.focusWords?.length > 0));
+              const badge = hasDone ? { label:'Done', bg:'#D6ECD2', color:'#2E6B27' } : hasIntention ? { label:'Pending', bg:'#FAE8D0', color:'#854F0B' } : { label:'Not yet', bg:'rgba(245,239,230,0.06)', color:'rgba(245,239,230,0.35)' };
+              return (
+                <div key={`${revMonthKey}-${intRefresh}`} style={{ background:'rgba(196,113,79,0.07)', border:'1px solid rgba(196,113,79,0.16)', borderRadius:'13px', padding:'12px', marginBottom:'8px' }}>
+                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'8px' }}>
+                    <span style={{ color:'rgba(245,239,230,0.42)', fontSize:'0.63rem', fontWeight:700, letterSpacing:'0.09em', textTransform:'uppercase', fontFamily:'Inter, sans-serif' }}>{MONTH_NAMES[revNavMonth]}</span>
+                    <span style={{ background:badge.bg, color:badge.color, borderRadius:'20px', padding:'2px 8px', fontSize:'0.62rem', fontFamily:'Inter, sans-serif', fontWeight:600 }}>{badge.label}</span>
+                  </div>
+                  {hasDone && review.answers && (() => {
+                    const lastQ = review.answers[Object.keys(review.answers).length - 1];
+                    const word = lastQ?.text;
+                    return word ? <p className="font-serif" style={{ color:'rgba(245,239,230,0.55)', fontSize:'0.8rem', fontStyle:'italic', marginBottom:'8px' }}>"{word}"</p> : null;
+                  })()}
+                  <button onClick={() => startReview('month', intKey, review?.answers)}
+                    style={{ width:'100%', background:'rgba(245,239,230,0.04)', border:'1px solid rgba(245,239,230,0.09)', borderRadius:'8px', color:'rgba(245,239,230,0.45)', fontSize:'0.69rem', cursor:'pointer', padding:'7px', fontFamily:'Inter, sans-serif', transition:'all 0.2s' }}
+                    onMouseEnter={e=>{e.currentTarget.style.background='rgba(245,239,230,0.08)';e.currentTarget.style.color='rgba(245,239,230,0.75)';}}
+                    onMouseLeave={e=>{e.currentTarget.style.background='rgba(245,239,230,0.04)';e.currentTarget.style.color='rgba(245,239,230,0.45)';}}
+                  >{hasDone ? 'Edit review →' : 'Start review →'}</button>
+                </div>
+              );
+            })()}
+            {revWeeks.map(({ weekKey: wk, label }) => {
+              const review = loadReviewForKey('week', wk);
+              const hasDone = !!review;
+              const intention = loadIntention(wk);
+              const hasIntention = !!(intention && (intention.sentence || intention.items?.length > 0 || intention.focusWords?.length > 0));
+              const badge = hasDone ? { label:'Done', bg:'#D6ECD2', color:'#2E6B27' } : hasIntention ? { label:'Pending', bg:'#FAE8D0', color:'#854F0B' } : { label:'Not yet', bg:'rgba(245,239,230,0.06)', color:'rgba(245,239,230,0.35)' };
+              return (
+                <div key={`${wk}-${intRefresh}`} style={{ background:'rgba(245,239,230,0.03)', border:'1px solid rgba(245,239,230,0.07)', borderRadius:'13px', padding:'12px', marginBottom:'8px' }}>
+                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'8px' }}>
+                    <span style={{ color:'rgba(245,239,230,0.38)', fontSize:'0.62rem', fontWeight:600, letterSpacing:'0.08em', textTransform:'uppercase', fontFamily:'Inter, sans-serif' }}>Wk of {label}</span>
+                    <span style={{ background:badge.bg, color:badge.color, borderRadius:'20px', padding:'2px 8px', fontSize:'0.62rem', fontFamily:'Inter, sans-serif', fontWeight:600 }}>{badge.label}</span>
+                  </div>
+                  {hasDone && review.answers && (() => {
+                    const lastQ = review.answers[Object.keys(review.answers).length - 1];
+                    const word = lastQ?.text;
+                    return word ? <p className="font-serif" style={{ color:'rgba(245,239,230,0.52)', fontSize:'0.77rem', fontStyle:'italic', marginBottom:'7px' }}>"{word}"</p> : null;
+                  })()}
+                  <button onClick={() => startReview('week', wk, review?.answers)}
+                    style={{ width:'100%', background:'rgba(245,239,230,0.04)', border:'1px solid rgba(245,239,230,0.08)', borderRadius:'8px', color:'rgba(245,239,230,0.4)', fontSize:'0.67rem', cursor:'pointer', padding:'6px', fontFamily:'Inter, sans-serif', transition:'all 0.2s' }}
+                    onMouseEnter={e=>{e.currentTarget.style.background='rgba(245,239,230,0.08)';e.currentTarget.style.color='rgba(245,239,230,0.72)';}}
+                    onMouseLeave={e=>{e.currentTarget.style.background='rgba(245,239,230,0.04)';e.currentTarget.style.color='rgba(245,239,230,0.4)';}}
+                  >{hasDone ? 'Edit review →' : 'Start review →'}</button>
+                </div>
+              );
+            })}
+          </div>
+          )}
 
-            {/* Calendar header */}
+          {/* ── History ── */}
+          {currentTab === 'history' && (
+          <div style={{ maxWidth:'680px', width:'100%', margin:'0 auto', padding:'16px 22px 88px', boxSizing:'border-box' }}>
             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'12px' }}>
               <h2 className="font-serif text-cream" style={{ fontSize:'1.1rem', fontWeight:600, margin:0 }}>Journal</h2>
               <div style={{ display:'flex', alignItems:'center', gap:'6px' }}>
@@ -3607,15 +3415,11 @@
                 >›</button>
               </div>
             </div>
-
-            {/* Day headers */}
             <div style={{ display:'grid', gridTemplateColumns:'repeat(7, 1fr)', gap:'3px', marginBottom:'3px' }}>
               {DAY_NAMES.map(d => (
                 <div key={d} style={{ textAlign:'center', color:'rgba(245,239,230,0.28)', fontSize:'0.68rem', fontWeight:600, letterSpacing:'0.04em', padding:'4px 0' }}>{d}</div>
               ))}
             </div>
-
-            {/* Calendar grid */}
             <div style={{ display:'grid', gridTemplateColumns:'repeat(7, 1fr)', gap:'3px', marginBottom:'14px' }}>
               {cells.map((day, idx) => {
                 if (!day) return <div key={`empty-${idx}`} />;
@@ -3625,15 +3429,12 @@
                 const isToday  = ds === today;
                 const isSel    = day === selectedDay;
                 const tint     = entry && ENERGY_TINTS[entry.energyLevel];
-
                 let bg, tc, sub;
                 if (isToday)       { bg='rgba(58,38,26,0.75)'; tc='#f5efe6'; sub='today'; }
                 else if (tint)     { bg=tint.bg; tc=tint.text; sub=tint.label; }
                 else               { bg='transparent'; tc=hasEntry?'rgba(245,239,230,0.55)':'rgba(245,239,230,0.2)'; sub=null; }
-
                 const border  = isToday ? '1px solid rgba(212,168,83,0.4)' : isSel ? '1px solid rgba(212,168,83,0.55)' : tint ? `1px solid ${tint.text}30` : '1px solid transparent';
                 const overlay = isSel ? 'rgba(212,168,83,0.12)' : null;
-
                 return (
                   <button key={day}
                     onClick={()=>{ if(hasEntry||isToday){ setSelectedDay(day===selectedDay?null:day); setDeleteConfirm(false); setEditMode(false); setEditData(null); } }}
@@ -3645,8 +3446,6 @@
                 );
               })}
             </div>
-
-            {/* Legend + export/clear */}
             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:'10px', flexWrap:'wrap', paddingBottom:'14px', marginBottom:'18px', borderBottom:'0.5px solid rgba(245,239,230,0.08)' }}>
               <div style={{ display:'flex', alignItems:'center', gap:'8px', flexWrap:'wrap' }}>
                 <span style={{ color:'rgba(245,239,230,0.32)', fontSize:'0.68rem', fontFamily:'Inter, sans-serif' }}>Energy:</span>
@@ -3656,23 +3455,17 @@
                     <span style={{ color:'rgba(245,239,230,0.42)', fontSize:'0.68rem', fontFamily:'Inter, sans-serif' }}>{ENERGY_TINTS[k].label}</span>
                   </div>
                 ))}
-                <div style={{ display:'flex', alignItems:'center', gap:'4px' }}>
-                  <div style={{ width:'13px', height:'13px', borderRadius:'3px', border:'1px dashed rgba(245,239,230,0.18)' }} />
-                  <span style={{ color:'rgba(245,239,230,0.42)', fontSize:'0.68rem', fontFamily:'Inter, sans-serif' }}>No entry</span>
-                </div>
               </div>
               <div style={{ display:'flex', gap:'7px', flexShrink:0 }}>
-                <button onClick={exportJournal} style={{ background:'rgba(212,168,83,0.1)', color:'#d4a853', border:'1px solid rgba(212,168,83,0.2)', borderRadius:'8px', padding:'5px 10px', fontSize:'0.72rem', fontWeight:600, cursor:'pointer', fontFamily:'Inter, sans-serif', transition:'all 0.2s', whiteSpace:'nowrap' }}
+                <button onClick={exportJournal} style={{ background:'rgba(212,168,83,0.1)', color:'#d4a853', border:'1px solid rgba(212,168,83,0.2)', borderRadius:'8px', padding:'5px 10px', fontSize:'0.72rem', fontWeight:600, cursor:'pointer', fontFamily:'Inter, sans-serif', whiteSpace:'nowrap' }}
                   onMouseEnter={e=>e.currentTarget.style.background='rgba(212,168,83,0.18)'}
                   onMouseLeave={e=>e.currentTarget.style.background='rgba(212,168,83,0.1)'}
                 >Export</button>
-                <button onClick={clearAllEntries} style={{ background:confirmClear?'rgba(232,152,122,0.12)':'rgba(245,239,230,0.04)', color:confirmClear?'#e8987a':'rgba(245,239,230,0.28)', border:confirmClear?'1px solid rgba(232,152,122,0.3)':'1px solid rgba(245,239,230,0.08)', borderRadius:'8px', padding:'5px 10px', fontSize:'0.72rem', cursor:'pointer', fontFamily:'Inter, sans-serif', transition:'all 0.2s', whiteSpace:'nowrap' }}>
+                <button onClick={clearAllEntries} style={{ background:confirmClear?'rgba(232,152,122,0.12)':'rgba(245,239,230,0.04)', color:confirmClear?'#e8987a':'rgba(245,239,230,0.28)', border:confirmClear?'1px solid rgba(232,152,122,0.3)':'1px solid rgba(245,239,230,0.08)', borderRadius:'8px', padding:'5px 10px', fontSize:'0.72rem', cursor:'pointer', fontFamily:'Inter, sans-serif', whiteSpace:'nowrap' }}>
                   {confirmClear ? 'Confirm clear?' : 'Clear all'}
                 </button>
               </div>
             </div>
-
-            {/* Entry viewer — multi-entry */}
             {selectedDay && calEntries.length > 0 ? (
               <div className="fade-in" style={{ marginBottom:'28px' }}>
                 <p className="font-serif" style={{ color:'#d4a853', fontSize:'0.95rem', fontWeight:600, marginBottom:'12px' }}>{formatDateNice(selectedDateStr)}</p>
@@ -3767,11 +3560,11 @@
                                     </div>
                                   ))}
                                   {entry.notes && (<><div style={{ borderTop:'0.5px solid rgba(245,239,230,0.08)', margin:'14px 0 10px' }} /><p style={{ color:'rgba(245,239,230,0.65)', fontSize:'0.88rem', lineHeight:1.6, fontFamily:'Inter, sans-serif', whiteSpace:'pre-wrap' }}>{entry.notes}</p></>)}
-                                  {entry.recommendedActivity && (<><div style={{ borderTop:'0.5px solid rgba(245,239,230,0.08)', margin:'14px 0 10px' }} /><p style={{ color:'rgba(245,239,230,0.36)', fontSize:'0.79rem', fontFamily:'Inter, sans-serif' }}>Chose that day: {entry.recommendedActivity.emoji} {entry.recommendedActivity.name}</p></>)}
+                                  {entry.recommendedActivity && (<><div style={{ borderTop:'0.5px solid rgba(245,239,230,0.08)', margin:'10px 0 6px' }} /><p style={{ color:'rgba(245,239,230,0.38)', fontSize:'0.75rem', fontFamily:'Inter, sans-serif' }}>Chose that day: {entry.recommendedActivity.emoji} {entry.recommendedActivity.name}</p></>)}
                                 </div>
                               )}
                               {!isCheckin && (
-                                <div style={{ display:'flex', flexDirection:'column', gap:'12px' }}>
+                                <div style={{ display:'flex', flexDirection:'column', gap:'10px' }}>
                                   {(entry.emotionalFlow||[]).map((f,i)=>f.answer?<div key={i}><p style={{ color:'#f5efe6', fontSize:'0.9rem', lineHeight:1.65, fontFamily:'Inter, sans-serif', whiteSpace:'pre-wrap' }}>{f.answer}</p></div>:null)}
                                 </div>
                               )}
@@ -3790,50 +3583,32 @@
               </div>
             )}
           </div>
+          )}
 
-          {/* Review overlay */}
           {renderReviewOverlay()}
         </div>
       );
     }
 
+
     // ─────────────────────────────────────────────
     //  APP
     // ─────────────────────────────────────────────
     function App() {
-      const [screen, setScreen]     = useState('today');
+      const [tab,     setTab]     = useState('today');   // 'today'|'intentions'|'reviews'|'history'
+      const [screen,  setScreen]  = useState(null);       // null|'flowSelector'|'emotionalFlow'|'journal'|'questions'|'results'
+      const [fading,  setFading]  = useState(false);
       const [currentQ, setCurrentQ] = useState(0);
-      const [answers, setAnswers]   = useState({});
-      const [fading, setFading]     = useState(false);
-      const [recs, setRecs]         = useState([]);
-      const [customActivities, setCustomActivities] = useState(() => loadCustomActivities());
+      const [answers,  setAnswers]  = useState({});
+      const [recs,     setRecs]     = useState([]);
       const [journalInfluence, setJournalInfluence] = useState(null);
+      const [customActivities, setCustomActivities] = useState(() => loadCustomActivities());
       const [disabledActivities, setDisabledActivities] = useState(() => {
         try { const s = localStorage.getItem('tonight-disabled'); return new Set(s ? JSON.parse(s) : []); } catch { return new Set(); }
       });
       const [hiddenActivities, setHiddenActivities] = useState(() => {
         try { const s = localStorage.getItem('tonight-hidden'); return new Set(s ? JSON.parse(s) : []); } catch { return new Set(); }
       });
-
-      // Returning-user: check recent journal entry first, fall back to old quiz answers
-      const lastEntry = (() => {
-        for (let i = 1; i <= 7; i++) {
-          const d = new Date(); d.setDate(d.getDate() - i);
-          const ds = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-          const e = loadJournalEntry(ds);
-          if (e) return e;
-        }
-        return null;
-      })();
-
-      const lastEnergy = (() => {
-        if (lastEntry) return null;
-        try {
-          const s = localStorage.getItem('tonight-answers');
-          const a = s ? JSON.parse(s) : null;
-          return a?.energy ? ENERGY_LABELS[a.energy] : null;
-        } catch { return null; }
-      })();
 
       function transition(fn) {
         setFading(true);
@@ -3844,8 +3619,12 @@
         transition(() => setScreen('flowSelector'));
       }
 
-      function handleSkip() {
-        transition(() => { setAnswers({}); setCurrentQ(0); setScreen('questions'); });
+      function goToday() {
+        transition(() => { setScreen(null); setTab('today'); setAnswers({}); setCurrentQ(0); });
+      }
+
+      function handleNavTab(id) {
+        transition(() => { setTab(id); setScreen(null); });
       }
 
       function handleBack() {
@@ -3855,13 +3634,10 @@
       function handleAnswer(id, value) {
         const newAnswers = { ...answers, [id]: value };
         setAnswers(newAnswers);
-
         if (currentQ < QUESTIONS.length - 1) {
           transition(() => setCurrentQ(q => q + 1));
         } else {
-          // Check for today's journal entry and apply keyword boosts
-          let boosts = null;
-          let influence = null;
+          let boosts = null, influence = null;
           const today = todayStr();
           const todayEntry = loadJournalEntry(today);
           if (todayEntry && todayEntry.prompts) {
@@ -3869,52 +3645,33 @@
             const b = getJournalBoosts(allText);
             if (b.influence) { boosts = b; influence = b.influence; }
           }
-
-          // Compute intention boosts from week + month intention localStorage
-          const intentionB = getIntentionBoosts();
-
-          // Get ranked recommendations without intention boosts to detect ranking change
-          const rNoIntent = getRecommendations(newAnswers, customActivities, boosts, disabledActivities, hiddenActivities, null);
-          const r = getRecommendations(newAnswers, customActivities, boosts, disabledActivities, hiddenActivities, intentionB);
-
-          // Show intention note only if the top pick changed due to intention boosts
-          let intentionNote = null;
+          const intentionB  = getIntentionBoosts();
+          const rNoIntent    = getRecommendations(newAnswers, customActivities, boosts, disabledActivities, hiddenActivities, null);
+          const r            = getRecommendations(newAnswers, customActivities, boosts, disabledActivities, hiddenActivities, intentionB);
+          let intentionNote  = null;
           if (intentionB && r.length > 0 && rNoIntent.length > 0 && r[0].id !== rNoIntent[0].id) {
-            const themes = intentionB.themes;
-            const words  = intentionB.focusWords;
-            const label  = words.length > 0 ? words[0] : (themes.length > 0 ? themes[0] : 'your intention');
+            const label = intentionB.focusWords?.[0] || intentionB.themes?.[0] || 'your intention';
             intentionNote = `Based on your intention around ${label}, we leaned toward ${r[0].name.toLowerCase()}.`;
           }
-
-          setRecs(r);
-          setJournalInfluence(influence || intentionNote);
+          setRecs(r); setJournalInfluence(influence || intentionNote);
           try { localStorage.setItem('tonight-answers', JSON.stringify(newAnswers)); } catch {}
-
-          // Write recommended activity back to today's journal entry
-          if (r.length > 0 && todayEntry) {
-            saveJournalEntry({ ...todayEntry, recommendedActivity: { id: r[0].id, name: r[0].name, emoji: r[0].emoji } });
-          }
-
+          if (r.length > 0 && todayEntry) saveJournalEntry({ ...todayEntry, recommendedActivity: { id: r[0].id, name: r[0].name, emoji: r[0].emoji } });
           transition(() => setScreen('results'));
         }
       }
 
       function handleRestart() {
-        transition(() => { setScreen('today'); setAnswers({}); setCurrentQ(0); setJournalInfluence(null); });
+        transition(() => { setScreen(null); setTab('today'); setAnswers({}); setCurrentQ(0); setJournalInfluence(null); });
       }
 
       function handleSaveActivity(activity) {
         const updated = [...customActivities, activity];
-        setCustomActivities(updated);
-        saveCustomActivities(updated);
+        setCustomActivities(updated); saveCustomActivities(updated);
       }
-
       function handleDeleteActivity(id) {
         const updated = customActivities.filter(a => a.id !== id);
-        setCustomActivities(updated);
-        saveCustomActivities(updated);
+        setCustomActivities(updated); saveCustomActivities(updated);
       }
-
       function handleToggleDisabled(id) {
         setDisabledActivities(prev => {
           const next = new Set(prev);
@@ -3923,43 +3680,63 @@
           return next;
         });
       }
-
       function handleHideActivity(id) {
         setHiddenActivities(prev => {
-          const next = new Set(prev);
-          next.add(id);
+          const next = new Set(prev); next.add(id);
           try { localStorage.setItem('tonight-hidden', JSON.stringify([...next])); } catch {}
           return next;
         });
       }
 
-      function handleNavClick(id) {
-        if (id === 'today')      transition(() => { setScreen('today'); setAnswers({}); setCurrentQ(0); });
-        if (id === 'journal')    transition(() => setScreen('calendar'));
-      }
-
-      function handleFindActivityFromJournal(journalData) {
-        const preAnswers = { energy: journalData.energyLevel, mental: journalData.mentalState };
-        transition(() => { setAnswers(preAnswers); setCurrentQ(2); setScreen('questions'); });
-      }
-
       return (
         <div style={{ minHeight: '100vh', background: '#1a1a2e' }}>
-          <TopNav screen={screen} onNav={handleNavClick} />
-          <div style={{ paddingTop: '56px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            {fading ? (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 'calc(100vh - 56px)' }}>
-                <div className="pulsing" style={{ display:'flex', alignItems:'center', justifyContent:'center' }}><CandleFlame width={40} height={52} /></div>
-              </div>
-            ) : (
-              <>
-                {screen === 'today' && (
-                  <TodayScreen
-                    onWrite={handleWrite}
-                    onSkip={handleSkip}
+          {fading ? (
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'center', minHeight:'100vh' }}>
+              <div className="pulsing" style={{ display:'flex', alignItems:'center', justifyContent:'center' }}><CandleFlame width={40} height={52} /></div>
+            </div>
+          ) : (
+            <>
+              {/* Brand header — shown on tab pages only */}
+              {!screen && <BrandHeader />}
+
+              {/* Tab pages */}
+              {!screen && tab === 'today' && (
+                <TodayScreen onWrite={handleWrite} onSkip={() => transition(() => { setAnswers({}); setCurrentQ(0); setScreen('questions'); })} />
+              )}
+              {!screen && (tab === 'intentions' || tab === 'reviews' || tab === 'history') && (
+                <CalendarScreen currentTab={tab} />
+              )}
+
+              {/* Flow screens */}
+              {screen === 'flowSelector' && (
+                <div style={{ display:'flex', justifyContent:'center' }}>
+                  <FlowSelectorScreen
+                    onCheckin={() => transition(() => setScreen('journal'))}
+                    onEmotional={() => transition(() => setScreen('emotionalFlow'))}
+                    onBack={() => transition(() => setScreen(null))}
                   />
-                )}
-                {screen === 'questions' && (
+                </div>
+              )}
+              {screen === 'emotionalFlow' && (
+                <div style={{ display:'flex', justifyContent:'center' }}>
+                  <EmotionalFlowScreen
+                    onDone={goToday}
+                    onBack={() => transition(() => setScreen('flowSelector'))}
+                    onFindActivity={null}
+                  />
+                </div>
+              )}
+              {screen === 'journal' && (
+                <div style={{ display:'flex', justifyContent:'center' }}>
+                  <JournalScreen
+                    onDone={goToday}
+                    onBack={() => transition(() => setScreen('flowSelector'))}
+                    onFindActivity={null}
+                  />
+                </div>
+              )}
+              {screen === 'questions' && (
+                <div style={{ display:'flex', justifyContent:'center' }}>
                   <QuestionScreen
                     question={QUESTIONS[currentQ]}
                     onAnswer={handleAnswer}
@@ -3968,46 +3745,28 @@
                     currentIndex={currentQ}
                     total={QUESTIONS.length}
                   />
-                )}
-                {screen === 'results' && (
+                </div>
+              )}
+              {screen === 'results' && (
+                <div style={{ display:'flex', justifyContent:'center' }}>
                   <ResultScreen
                     recommendations={recs}
                     answers={answers}
                     onRestart={handleRestart}
                     journalInfluence={journalInfluence}
-                    onCalendar={() => transition(() => setScreen('calendar'))}
+                    onCalendar={goToday}
                   />
-                )}
-                {screen === 'flowSelector' && (
-                  <FlowSelectorScreen
-                    onCheckin={() => transition(() => setScreen('journal'))}
-                    onEmotional={() => transition(() => setScreen('emotionalFlow'))}
-                    onBack={() => transition(() => setScreen('today'))}
-                  />
-                )}
-                {screen === 'emotionalFlow' && (
-                  <EmotionalFlowScreen
-                    onDone={() => transition(() => setScreen('calendar'))}
-                    onBack={() => transition(() => setScreen('flowSelector'))}
-                    onFindActivity={() => transition(() => { setAnswers({}); setCurrentQ(0); setScreen('questions'); })}
-                  />
-                )}
-                {screen === 'journal' && (
-                  <JournalScreen
-                    onDone={() => transition(() => setScreen('calendar'))}
-                    onBack={() => transition(() => setScreen('flowSelector'))}
-                    onFindActivity={handleFindActivityFromJournal}
-                  />
-                )}
-                {screen === 'calendar' && (
-                  <CalendarScreen
-                    onBack={() => transition(() => setScreen('today'))}
-                    onWrite={() => transition(() => setScreen('flowSelector'))}
-                  />
-                )}
-              </>
-            )}
-          </div>
+                </div>
+              )}
+
+              {/* Bottom nav — always visible */}
+              <BottomNav
+                tab={screen ? null : tab}
+                onTabChange={handleNavTab}
+                onWrite={handleWrite}
+              />
+            </>
+          )}
         </div>
       );
     }
