@@ -1134,6 +1134,13 @@
       const [editingId,      setEditingId]      = useState(null);
       const [editData,       setEditData]       = useState(null);
       const [deleteConfirm,  setDeleteConfirm]  = useState(null); // holds id of entry pending delete
+      const [dailyInsight,   setDailyInsight]   = useState(() => generateDailyInsight());
+
+      useEffect(() => {
+        const ins = generateDailyInsight();
+        setDailyInsight(ins);
+        if (ins) saveInsightLastShownDaily(ins.key);
+      }, [entries]);
 
       const hour  = now.getHours();
       const greet = hour < 5 ? 'Still up?' : hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
@@ -1321,12 +1328,19 @@
 
             {entries.length > 0 ? (
               <>
-                {/* Write button always visible when entries exist */}
-                <button onClick={onWrite}
-                  style={{ background:'rgba(196,113,79,0.1)', color:'#e8987a', border:'1px solid rgba(196,113,79,0.25)', borderRadius:'14px', padding:'12px 20px', fontSize:'0.9rem', fontWeight:600, cursor:'pointer', fontFamily:'Inter, sans-serif', transition:'all 0.2s ease', display:'block', width:'100%', marginBottom:'16px' }}
-                  onMouseEnter={e=>{e.currentTarget.style.background='rgba(196,113,79,0.18)';}}
-                  onMouseLeave={e=>{e.currentTarget.style.background='rgba(196,113,79,0.1)';}}
-                >+ Write in Journal</button>
+                {/* Daily micro-insight — top position when entries exist */}
+                {dailyInsight && (
+                  <div style={{ background:'rgba(245,239,230,0.04)', border:'1px solid rgba(180,150,210,0.14)', borderRadius:'14px', padding:'14px 16px', marginBottom:'20px', display:'flex', flexDirection:'column', gap:'0' }}>
+                    <div style={{ display:'flex', alignItems:'flex-start', gap:'9px' }}>
+                      <svg width="13" height="13" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink:0, marginTop:'3px', opacity:0.55 }}>
+                        <path d="M7 0L8.16 5.06L13 7L8.16 8.94L7 14L5.84 8.94L1 7L5.84 5.06L7 0Z" fill="rgba(212,168,83,0.9)"/>
+                      </svg>
+                      <p className="font-serif" style={{ color:'rgba(245,239,230,0.48)', fontSize:'13px', fontStyle:'italic', lineHeight:1.7, margin:0 }}>
+                        {dailyInsight.text}
+                      </p>
+                    </div>
+                  </div>
+                )}
 
                 {/* Entry cards */}
                 {entries.map(entry => renderEntryCard(entry))}
@@ -1359,6 +1373,7 @@
                 <IntentionCard intentionKey={weekKey}  isMonth={false} label={weekLabel} />
               </>
             )}
+
           </div>
         </div>
       );
@@ -2862,6 +2877,191 @@
     }
 
     // ─────────────────────────────────────────────
+    //  INSIGHT ENGINE  (js/lib/insights.js inlined)
+    // ─────────────────────────────────────────────
+
+    const INSIGHT_DAILY_KEY = 'insight_last_shown_daily';
+    function getInsightLastShownDaily() {
+      try { const s = localStorage.getItem(INSIGHT_DAILY_KEY); return s ? JSON.parse(s) : null; } catch { return null; }
+    }
+    function saveInsightLastShownDaily(key) {
+      try { localStorage.setItem(INSIGHT_DAILY_KEY, JSON.stringify({ date: todayStr(), key })); } catch {}
+    }
+
+    function getEntriesForRange(startStr, endStr) {
+      const entries = [];
+      const start = new Date(startStr + 'T00:00:00');
+      const end   = new Date(endStr   + 'T23:59:59');
+      const cur   = new Date(start);
+      while (cur <= end) {
+        const ds = `${cur.getFullYear()}-${String(cur.getMonth()+1).padStart(2,'0')}-${String(cur.getDate()).padStart(2,'0')}`;
+        entries.push(...loadJournalEntries(ds));
+        cur.setDate(cur.getDate() + 1);
+      }
+      return entries;
+    }
+    function getCheckInEntries(es)   { return es.filter(e => e.flowType !== 'emotional'); }
+    function getEmotionalEntries(es) { return es.filter(e => e.flowType === 'emotional'); }
+    function getMostFrequent(arr) {
+      if (!arr || arr.length === 0) return null;
+      const c = {};
+      for (const v of arr) { if (v != null) c[v] = (c[v] || 0) + 1; }
+      const ks = Object.keys(c); if (ks.length === 0) return null;
+      return ks.reduce((a, b) => c[a] >= c[b] ? a : b);
+    }
+    function getInsightStreak() {
+      const now = new Date(); let n = 0;
+      for (let i = 0; i < 365; i++) {
+        const d = new Date(now); d.setDate(d.getDate() - i);
+        const ds = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        if (loadJournalEntries(ds).length === 0) break; n++;
+      }
+      return n;
+    }
+    function getFieldRate(es, field, val) { return es.length ? es.filter(e => e[field] === val).length / es.length : 0; }
+    function getWeekAvg(es, field)        { return getMostFrequent(es.map(e => e[field]).filter(v => v != null)); }
+    function getEmoBranchFreq(es)         { return getMostFrequent(getEmotionalEntries(es).map(e => e.emotionalBranch).filter(Boolean)); }
+    function getRepeatedFocusWords(wks) {
+      const wc = {};
+      for (const wk of wks) { const i = loadIntention(wk); if (i && i.focusWords) for (const w of i.focusWords) wc[w] = (wc[w]||0)+1; }
+      return Object.entries(wc).filter(([,c])=>c>=2).map(([w])=>w);
+    }
+    const _STOP = new Set(['i','a','an','the','and','or','but','in','on','at','to','for','of','with','it','is','was','my','me','you','we','he','she','they','this','that','just','so','do','be','not','have','had','has','what','how','when','where','why','if','then','there','here','all','some','one','two','got','get','can','will','would','could','should','about','from','up','out','no','yes','its','our','been','are','were','go','going','went','feel','felt','feeling','really','very','little','bit','kind','lot','too','also','still','again','back','day','night','time','today','like','want','need','think','know']);
+    function getTopicKeywords(es) {
+      const counts = {};
+      for (const e of es) {
+        const txts = e.flowType==='emotional'
+          ? (e.emotionalFlow||[]).map(f=>f.answer).filter(Boolean)
+          : [...(e.prompts||[]).map(p=>p.answer).filter(Boolean), e.notes].filter(Boolean);
+        for (const t of txts) for (const w of t.toLowerCase().replace(/[^a-z\s]/g,' ').split(/\s+/)) if (w.length>=4 && !_STOP.has(w)) counts[w]=(counts[w]||0)+1;
+      }
+      return Object.entries(counts).filter(([,c])=>c>=2).sort((a,b)=>b[1]-a[1]).slice(0,8).map(([w])=>w);
+    }
+    function getJournalBehaviour(es) {
+      const hs = es.map(e=>{ try{return new Date(e.createdAt).getHours();}catch{return null;} }).filter(h=>h!=null);
+      if (!hs.length) return null;
+      const avg = hs.reduce((a,b)=>a+b,0)/hs.length;
+      return avg<17?'early':avg<21?'evening':'late';
+    }
+
+    const IT = {
+      body_low_run:       n    => `You've had ${n} tired day${n>1?'s':''} in a row. Your body has been working hard.`,
+      body_good_run:      n    => `You've checked in feeling good ${n} day${n>1?'s':''} running. Something has been working.`,
+      body_mostly_tired:  ()   => `Most of your recent check-ins have landed on tired or drained.`,
+      head_foggy:         ()   => `Foggy has been your most common headspace lately. Sometimes the mind just needs stillness.`,
+      head_overstimulated:()   => `Overstimulated keeps coming up. There might be more input than you can hold right now.`,
+      head_clear_run:     n    => `You've had ${n} clear-headed day${n>1?'s':''} recently. Worth noticing what made them different.`,
+      stress_high:        n    => `High stress ${n} day${n>1?'s':''} this week. That's a lot to carry.`,
+      stress_low_run:     ()   => `You've had a stretch of lower-stress days. Whatever helped — it's worth keeping.`,
+      emotional_frequent: b    => { const m={grief:'grief',anxiety:'anxiety',anger:'anger',sadness:'sadness',loneliness:'loneliness',overwhelm:'feeling overwhelmed',stress:'stress'}; return `You've been sitting with ${m[b]||b} quite a bit lately. That takes something to keep naming.`; },
+      emotional_explore:  n    => `You chose to explore a feeling ${n} time${n>1?'s':''} recently. That takes courage.`,
+      streak:             n    => `${n} nights in a row. Showing up when you're tired is its own kind of strength.`,
+      late_habit:         ()   => `You tend to write late in the evening. Consistent, even when the day runs long.`,
+      evening_habit:      ()   => `Evening is your time to check in. There's something grounding about that rhythm.`,
+      focus_repeat:       ws   => `${ws.join(' and ')} keeps showing up in your intentions. Something you keep returning to.`,
+      cross_tired_stress: ()   => `Tired body and high stress together. That particular combination is heavy.`,
+      cross_clear_calm:   ()   => `Clear-headed and calm on the same day — that's a combination worth remembering.`,
+      topic_recurring:    w    => `The word "${w}" keeps appearing in what you write. Worth sitting with.`,
+      milestone:          n    => `${n} entries this month. You keep showing up.`,
+    };
+
+    function generateDailyInsight() {
+      const today = todayStr();
+      const last  = getInsightLastShownDaily();
+      const usedKey = (last && last.date === today) ? last.key : null;
+      const now = new Date();
+      const sd = new Date(now); sd.setDate(sd.getDate()-13);
+      const startStr = `${sd.getFullYear()}-${String(sd.getMonth()+1).padStart(2,'0')}-${String(sd.getDate()).padStart(2,'0')}`;
+      const recent = getEntriesForRange(startStr, today);
+      if (recent.length < 3) return null;
+      const checkins = getCheckInEntries(recent);
+      const emotional = getEmotionalEntries(recent);
+      const cands = [];
+      function add(key, text, p) { if (key !== usedKey) cands.push({key,text,p}); }
+      const streak = getInsightStreak();
+      if (streak >= 4) add('streak', IT.streak(streak), 1);
+      if (checkins.length >= 3) {
+        const l3 = checkins.slice(-3);
+        if (l3.every(e=>e.energyLevel==='drained'||e.energyLevel==='tired')) add('body_low_run', IT.body_low_run(l3.length), 2);
+        else if (l3.every(e=>e.energyLevel==='good')) add('body_good_run', IT.body_good_run(l3.length), 2);
+        if (getFieldRate(checkins,'energyLevel','tired')+getFieldRate(checkins,'energyLevel','drained')>=0.6) add('body_mostly_tired',IT.body_mostly_tired(),3);
+        const highN = checkins.filter(e=>e.stressIntensity==='high').length;
+        if (highN>=3) add('stress_high',IT.stress_high(highN),2);
+        else if (getFieldRate(checkins,'stressIntensity','low')>=0.5) add('stress_low_run',IT.stress_low_run(),3);
+        const overR=getFieldRate(checkins,'mentalState','overstimulated'), fogR=getFieldRate(checkins,'mentalState','foggy'), clearN=checkins.filter(e=>e.mentalState==='clear').length;
+        if (overR>=0.4) add('head_overstimulated',IT.head_overstimulated(),3);
+        else if (fogR>=0.4) add('head_foggy',IT.head_foggy(),3);
+        else if (clearN>=3) add('head_clear_run',IT.head_clear_run(clearN),3);
+        const tiredStress=checkins.filter(e=>(e.energyLevel==='tired'||e.energyLevel==='drained')&&e.stressIntensity==='high').length;
+        if (tiredStress>=2) add('cross_tired_stress',IT.cross_tired_stress(),2);
+        const clearCalm=checkins.filter(e=>e.mentalState==='clear'&&e.emotionTone==='calm').length;
+        if (clearCalm>=2) add('cross_clear_calm',IT.cross_clear_calm(),3);
+      }
+      if (emotional.length>=2) {
+        const b=getEmoBranchFreq(recent); if (b) add('emotional_frequent',IT.emotional_frequent(b),2);
+        add('emotional_explore',IT.emotional_explore(emotional.length),4);
+      }
+      const beh=getJournalBehaviour(recent);
+      if (beh==='late') add('late_habit',IT.late_habit(),5);
+      else if (beh==='evening') add('evening_habit',IT.evening_habit(),5);
+      if (recent.length>=5) { const kws=getTopicKeywords(recent); if (kws.length) add('topic_recurring',IT.topic_recurring(kws[0]),4); }
+      const msStart=new Date(now.getFullYear(),now.getMonth(),1);
+      const msStr=`${msStart.getFullYear()}-${String(msStart.getMonth()+1).padStart(2,'0')}-01`;
+      const monthN=getEntriesForRange(msStr,today).length;
+      if (monthN>=5) add('milestone',IT.milestone(monthN),6);
+      if (!cands.length) return null;
+      cands.sort((a,b)=>a.p-b.p);
+      return {key:cands[0].key, text:cands[0].text};
+    }
+
+    function generateWeeklyInsights(weekKey) {
+      const m = weekKey.match(/intention_week_(\d{4})-(\d{2})/);
+      if (!m) return [];
+      const year=parseInt(m[1]), week=parseInt(m[2]);
+      const jan4=new Date(year,0,4), jan4day=(jan4.getDay()+6)%7;
+      const wkOneStart=new Date(jan4.getTime()-jan4day*86400000);
+      const wkStart=new Date(wkOneStart.getTime()+(week-1)*7*86400000);
+      const wkEnd=new Date(wkStart.getTime()+6*86400000);
+      const fmt=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      const entries=getEntriesForRange(fmt(wkStart),fmt(wkEnd));
+      if (entries.length<2) return [];
+      const checkins=getCheckInEntries(entries), emotional=getEmotionalEntries(entries);
+      const ins=[];
+      if (checkins.length>=2) {
+        const tR=getFieldRate(checkins,'energyLevel','tired')+getFieldRate(checkins,'energyLevel','drained');
+        if (tR>=0.5) ins.push({key:'body_low_run',text:IT.body_low_run(checkins.filter(e=>e.energyLevel==='drained'||e.energyLevel==='tired').length)});
+        else if (getWeekAvg(checkins,'energyLevel')==='good') ins.push({key:'body_good_run',text:IT.body_good_run(checkins.filter(e=>e.energyLevel==='good').length)});
+        const hN=checkins.filter(e=>e.stressIntensity==='high').length; if (hN>=2) ins.push({key:'stress_high',text:IT.stress_high(hN)});
+        const oN=checkins.filter(e=>e.mentalState==='overstimulated').length; if (oN>=2) ins.push({key:'head_overstimulated',text:IT.head_overstimulated()});
+      }
+      if (emotional.length>=1) ins.push({key:'emotional_explore',text:IT.emotional_explore(emotional.length)});
+      return ins.slice(0,3);
+    }
+
+    function generateMonthlyInsights(monthKey) {
+      const m=monthKey.match(/intention_month_(\d{4})-(\d{2})/);
+      if (!m) return [];
+      const year=parseInt(m[1]), month=parseInt(m[2])-1;
+      const startStr=`${year}-${String(month+1).padStart(2,'0')}-01`;
+      const lastDay=new Date(year,month+1,0).getDate();
+      const endStr=`${year}-${String(month+1).padStart(2,'0')}-${String(lastDay).padStart(2,'0')}`;
+      const entries=getEntriesForRange(startStr,endStr);
+      if (entries.length<5) return [];
+      const checkins=getCheckInEntries(entries), emotional=getEmotionalEntries(entries);
+      const ins=[{key:'milestone',text:IT.milestone(entries.length)}];
+      if (checkins.length>=5) {
+        const tR=getFieldRate(checkins,'energyLevel','tired')+getFieldRate(checkins,'energyLevel','drained');
+        if (tR>=0.55) ins.push({key:'body_mostly_tired',text:IT.body_mostly_tired()});
+        else if (getWeekAvg(checkins,'energyLevel')==='good') ins.push({key:'body_good_run',text:IT.body_good_run(checkins.filter(e=>e.energyLevel==='good').length)});
+      }
+      if (emotional.length>=2) { const b=getEmoBranchFreq(entries); if (b) ins.push({key:'emotional_frequent',text:IT.emotional_frequent(b)}); }
+      const wks=[]; for (let d=new Date(year,month,1);d.getMonth()===month;d.setDate(d.getDate()+7)) wks.push(getWeekKey(new Date(d)));
+      const rep=getRepeatedFocusWords(wks); if (rep.length) ins.push({key:'focus_repeat',text:IT.focus_repeat(rep.slice(0,2))});
+      const kws=getTopicKeywords(entries); if (kws.length) ins.push({key:'topic_recurring',text:IT.topic_recurring(kws[0])});
+      return ins.slice(0,4);
+    }
+
+    // ─────────────────────────────────────────────
     //  CALENDAR SCREEN
     // ─────────────────────────────────────────────
     function CalendarScreen({ currentTab }) {
@@ -2902,6 +3102,10 @@
       const [intNavMonth, setIntNavMonth] = useState(now.getMonth());
       const [revNavYear,  setRevNavYear]  = useState(now.getFullYear());
       const [revNavMonth, setRevNavMonth] = useState(now.getMonth());
+
+      // ── Reviews & Insights tab state ──────────────
+      const [revView,      setRevView]      = useState('week'); // 'week' | 'month'
+      const [expandedWeek, setExpandedWeek] = useState(null);   // weekKey of open accordion row
 
       // ── Force re-read of intentions/reviews ───────
       const [intRefresh,  setIntRefresh]  = useState(0);
@@ -3339,64 +3543,143 @@
           </div>
           )}
 
-          {/* ── Reviews ── */}
+          {/* ── Reviews & Insights ── */}
           {currentTab === 'reviews' && (
           <div style={{ maxWidth:'600px', width:'100%', margin:'0 auto', padding:'16px 20px 88px', boxSizing:'border-box' }}>
+
+            {/* Header row: title + pill toggle */}
             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'16px' }}>
-              <span className="font-serif text-cream" style={{ fontSize:'1rem', fontWeight:600 }}>Reviews</span>
+              <span className="font-serif text-cream" style={{ fontSize:'1rem', fontWeight:600 }}>Reviews & Insights</span>
+              <div style={{ display:'flex', background:'rgba(245,239,230,0.05)', borderRadius:'20px', padding:'3px', gap:'2px' }}>
+                {['week','month'].map(v => (
+                  <button key={v} onClick={() => setRevView(v)}
+                    style={{ background:revView===v?'rgba(196,113,79,0.22)':'none', border:'none', borderRadius:'16px', padding:'4px 14px', fontSize:'0.73rem', fontFamily:'Inter, sans-serif', color:revView===v?'#e8987a':'rgba(245,239,230,0.38)', cursor:'pointer', fontWeight:revView===v?600:400, transition:'all 0.2s' }}
+                  >{v==='week'?'Weeks':'Month'}</button>
+                ))}
+              </div>
+            </div>
+
+            {/* Navigation */}
+            <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:'14px' }}>
               <NavArrows onPrev={prevRevMonth} onNext={nextRevMonth} label={`${MONTH_NAMES[revNavMonth].slice(0,3)} ${revNavYear}`} />
             </div>
-            {(() => {
+
+            {/* ── WEEK VIEW ── */}
+            {revView === 'week' && revWeeks.map(({ weekKey: wk, label }) => {
+              const review = loadReviewForKey('week', wk);
+              const hasDone = !!review;
+              const intention = loadIntention(wk);
+              const hasIntention = !!(intention && (intention.sentence || intention.items?.length > 0 || intention.focusWords?.length > 0));
+              const badge = hasDone
+                ? { label:'Done',    bg:'rgba(76,130,70,0.22)',  color:'#5a9150' }
+                : hasIntention
+                ? { label:'Pending', bg:'rgba(160,110,50,0.22)', color:'#9a7030' }
+                : { label:'Not yet', bg:'rgba(245,239,230,0.06)', color:'rgba(245,239,230,0.35)' };
+              const isExpanded = expandedWeek === wk;
+              const wkInsights = isExpanded ? generateWeeklyInsights(wk) : [];
+              return (
+                <div key={`${wk}-${intRefresh}`} style={{ background:'rgba(245,239,230,0.03)', border:`1px solid ${isExpanded?'rgba(196,113,79,0.18)':'rgba(245,239,230,0.07)'}`, borderRadius:'13px', marginBottom:'8px', overflow:'hidden', transition:'border-color 0.2s' }}>
+                  {/* Accordion header */}
+                  <button onClick={() => setExpandedWeek(isExpanded ? null : wk)}
+                    style={{ width:'100%', display:'flex', alignItems:'center', justifyContent:'space-between', padding:'11px 12px', background:'none', border:'none', cursor:'pointer', textAlign:'left' }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:'8px', flexWrap:'wrap' }}>
+                      <span style={{ color:'rgba(245,239,230,0.38)', fontSize:'0.62rem', fontWeight:600, letterSpacing:'0.08em', textTransform:'uppercase', fontFamily:'Inter, sans-serif' }}>Wk of {label}</span>
+                      <span style={{ background:badge.bg, color:badge.color, borderRadius:'20px', padding:'2px 8px', fontSize:'0.62rem', fontFamily:'Inter, sans-serif', fontWeight:600 }}>{badge.label}</span>
+                    </div>
+                    <span style={{ color:'rgba(245,239,230,0.22)', fontSize:'0.72rem', flexShrink:0, marginLeft:'8px' }}>{isExpanded?'∨':'›'}</span>
+                  </button>
+
+                  {/* Expanded body */}
+                  {isExpanded && (
+                    <div style={{ padding:'0 12px 12px', borderTop:'0.5px solid rgba(245,239,230,0.07)' }}>
+                      {/* Inline insights */}
+                      {wkInsights.length > 0 && (
+                        <div style={{ background:'rgba(245,239,230,0.03)', border:'1px solid rgba(180,150,210,0.12)', borderRadius:'10px', padding:'10px 12px', margin:'10px 0 4px', display:'flex', flexDirection:'column', gap:'7px' }}>
+                          {wkInsights.map((ins, i) => (
+                            <div key={i} style={{ display:'flex', alignItems:'flex-start', gap:'8px' }}>
+                              <svg width="11" height="11" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink:0, marginTop:'3px', opacity:0.45 }}>
+                                <path d="M7 0L8.16 5.06L13 7L8.16 8.94L7 14L5.84 8.94L1 7L5.84 5.06L7 0Z" fill="rgba(212,168,83,0.9)"/>
+                              </svg>
+                              <p className="font-serif" style={{ color:'rgba(245,239,230,0.42)', fontSize:'0.78rem', fontStyle:'italic', lineHeight:1.65, margin:0 }}>
+                                {ins.text}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {/* Last review word */}
+                      {hasDone && review.answers && (() => {
+                        const lastQ = review.answers[Object.keys(review.answers).length - 1];
+                        const word = lastQ?.text;
+                        return word ? (
+                          <p className="font-serif" style={{ color:'rgba(245,239,230,0.52)', fontSize:'0.77rem', fontStyle:'italic', margin:'8px 0 6px' }}>
+                            "{word}"
+                          </p>
+                        ) : null;
+                      })()}
+                      {/* Action */}
+                      <button onClick={() => startReview('week', wk, review?.answers)}
+                        style={{ width:'100%', background:'rgba(245,239,230,0.04)', border:'1px solid rgba(245,239,230,0.08)', borderRadius:'8px', color:'rgba(245,239,230,0.4)', fontSize:'0.67rem', cursor:'pointer', padding:'7px', fontFamily:'Inter, sans-serif', transition:'all 0.2s', marginTop:'10px' }}
+                        onMouseEnter={e=>{e.currentTarget.style.background='rgba(245,239,230,0.08)';e.currentTarget.style.color='rgba(245,239,230,0.72)';}}
+                        onMouseLeave={e=>{e.currentTarget.style.background='rgba(245,239,230,0.04)';e.currentTarget.style.color='rgba(245,239,230,0.4)';}}
+                      >{hasDone ? 'Edit review →' : 'Start review →'}</button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+
+            {/* ── MONTH VIEW ── */}
+            {revView === 'month' && (() => {
               const intKey = revMonthKey;
               const review = loadReviewForKey('month', intKey);
               const hasDone = !!review;
               const intention = loadIntention(intKey);
               const hasIntention = !!(intention && (intention.sentence || intention.items?.length > 0 || intention.focusWords?.length > 0));
-              const badge = hasDone ? { label:'Done', bg:'#D6ECD2', color:'#2E6B27' } : hasIntention ? { label:'Pending', bg:'#FAE8D0', color:'#854F0B' } : { label:'Not yet', bg:'rgba(245,239,230,0.06)', color:'rgba(245,239,230,0.35)' };
+              const badge = hasDone
+                ? { label:'Done',    bg:'rgba(76,130,70,0.22)',  color:'#5a9150' }
+                : hasIntention
+                ? { label:'Pending', bg:'rgba(160,110,50,0.22)', color:'#9a7030' }
+                : { label:'Not yet', bg:'rgba(245,239,230,0.06)', color:'rgba(245,239,230,0.35)' };
+              const monthInsights = generateMonthlyInsights(intKey);
               return (
-                <div key={`${revMonthKey}-${intRefresh}`} style={{ background:'rgba(196,113,79,0.07)', border:'1px solid rgba(196,113,79,0.16)', borderRadius:'13px', padding:'12px', marginBottom:'8px' }}>
-                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'8px' }}>
-                    <span style={{ color:'rgba(245,239,230,0.42)', fontSize:'0.63rem', fontWeight:700, letterSpacing:'0.09em', textTransform:'uppercase', fontFamily:'Inter, sans-serif' }}>{MONTH_NAMES[revNavMonth]}</span>
-                    <span style={{ background:badge.bg, color:badge.color, borderRadius:'20px', padding:'2px 8px', fontSize:'0.62rem', fontFamily:'Inter, sans-serif', fontWeight:600 }}>{badge.label}</span>
+                <div key={`${revMonthKey}-${intRefresh}`}>
+                  {/* Monthly insights */}
+                  {monthInsights.length > 0 && (
+                    <div style={{ background:'rgba(245,239,230,0.03)', border:'1px solid rgba(180,150,210,0.12)', borderRadius:'13px', padding:'14px 16px', marginBottom:'16px', display:'flex', flexDirection:'column', gap:'10px' }}>
+                      {monthInsights.map((ins, i) => (
+                        <div key={i} style={{ display:'flex', alignItems:'flex-start', gap:'9px' }}>
+                          <svg width="11" height="11" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink:0, marginTop:'4px', opacity:0.45 }}>
+                            <path d="M7 0L8.16 5.06L13 7L8.16 8.94L7 14L5.84 8.94L1 7L5.84 5.06L7 0Z" fill="rgba(212,168,83,0.9)"/>
+                          </svg>
+                          <p className="font-serif" style={{ color:'rgba(245,239,230,0.45)', fontSize:'0.82rem', fontStyle:'italic', lineHeight:1.68, margin:0 }}>
+                            {ins.text}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {/* Month review card */}
+                  <div style={{ background:'rgba(196,113,79,0.07)', border:'1px solid rgba(196,113,79,0.16)', borderRadius:'13px', padding:'12px' }}>
+                    <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'8px' }}>
+                      <span style={{ color:'rgba(245,239,230,0.42)', fontSize:'0.63rem', fontWeight:700, letterSpacing:'0.09em', textTransform:'uppercase', fontFamily:'Inter, sans-serif' }}>{MONTH_NAMES[revNavMonth]}</span>
+                      <span style={{ background:badge.bg, color:badge.color, borderRadius:'20px', padding:'2px 8px', fontSize:'0.62rem', fontFamily:'Inter, sans-serif', fontWeight:600 }}>{badge.label}</span>
+                    </div>
+                    {hasDone && review.answers && (() => {
+                      const lastQ = review.answers[Object.keys(review.answers).length - 1];
+                      const word = lastQ?.text;
+                      return word ? <p className="font-serif" style={{ color:'rgba(245,239,230,0.55)', fontSize:'0.8rem', fontStyle:'italic', marginBottom:'8px' }}>"{word}"</p> : null;
+                    })()}
+                    <button onClick={() => startReview('month', intKey, review?.answers)}
+                      style={{ width:'100%', background:'rgba(245,239,230,0.04)', border:'1px solid rgba(245,239,230,0.09)', borderRadius:'8px', color:'rgba(245,239,230,0.45)', fontSize:'0.69rem', cursor:'pointer', padding:'7px', fontFamily:'Inter, sans-serif', transition:'all 0.2s' }}
+                      onMouseEnter={e=>{e.currentTarget.style.background='rgba(245,239,230,0.08)';e.currentTarget.style.color='rgba(245,239,230,0.75)';}}
+                      onMouseLeave={e=>{e.currentTarget.style.background='rgba(245,239,230,0.04)';e.currentTarget.style.color='rgba(245,239,230,0.45)';}}
+                    >{hasDone ? 'Edit review →' : 'Start review →'}</button>
                   </div>
-                  {hasDone && review.answers && (() => {
-                    const lastQ = review.answers[Object.keys(review.answers).length - 1];
-                    const word = lastQ?.text;
-                    return word ? <p className="font-serif" style={{ color:'rgba(245,239,230,0.55)', fontSize:'0.8rem', fontStyle:'italic', marginBottom:'8px' }}>"{word}"</p> : null;
-                  })()}
-                  <button onClick={() => startReview('month', intKey, review?.answers)}
-                    style={{ width:'100%', background:'rgba(245,239,230,0.04)', border:'1px solid rgba(245,239,230,0.09)', borderRadius:'8px', color:'rgba(245,239,230,0.45)', fontSize:'0.69rem', cursor:'pointer', padding:'7px', fontFamily:'Inter, sans-serif', transition:'all 0.2s' }}
-                    onMouseEnter={e=>{e.currentTarget.style.background='rgba(245,239,230,0.08)';e.currentTarget.style.color='rgba(245,239,230,0.75)';}}
-                    onMouseLeave={e=>{e.currentTarget.style.background='rgba(245,239,230,0.04)';e.currentTarget.style.color='rgba(245,239,230,0.45)';}}
-                  >{hasDone ? 'Edit review →' : 'Start review →'}</button>
                 </div>
               );
             })()}
-            {revWeeks.map(({ weekKey: wk, label }) => {
-              const review = loadReviewForKey('week', wk);
-              const hasDone = !!review;
-              const intention = loadIntention(wk);
-              const hasIntention = !!(intention && (intention.sentence || intention.items?.length > 0 || intention.focusWords?.length > 0));
-              const badge = hasDone ? { label:'Done', bg:'#D6ECD2', color:'#2E6B27' } : hasIntention ? { label:'Pending', bg:'#FAE8D0', color:'#854F0B' } : { label:'Not yet', bg:'rgba(245,239,230,0.06)', color:'rgba(245,239,230,0.35)' };
-              return (
-                <div key={`${wk}-${intRefresh}`} style={{ background:'rgba(245,239,230,0.03)', border:'1px solid rgba(245,239,230,0.07)', borderRadius:'13px', padding:'12px', marginBottom:'8px' }}>
-                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'8px' }}>
-                    <span style={{ color:'rgba(245,239,230,0.38)', fontSize:'0.62rem', fontWeight:600, letterSpacing:'0.08em', textTransform:'uppercase', fontFamily:'Inter, sans-serif' }}>Wk of {label}</span>
-                    <span style={{ background:badge.bg, color:badge.color, borderRadius:'20px', padding:'2px 8px', fontSize:'0.62rem', fontFamily:'Inter, sans-serif', fontWeight:600 }}>{badge.label}</span>
-                  </div>
-                  {hasDone && review.answers && (() => {
-                    const lastQ = review.answers[Object.keys(review.answers).length - 1];
-                    const word = lastQ?.text;
-                    return word ? <p className="font-serif" style={{ color:'rgba(245,239,230,0.52)', fontSize:'0.77rem', fontStyle:'italic', marginBottom:'7px' }}>"{word}"</p> : null;
-                  })()}
-                  <button onClick={() => startReview('week', wk, review?.answers)}
-                    style={{ width:'100%', background:'rgba(245,239,230,0.04)', border:'1px solid rgba(245,239,230,0.08)', borderRadius:'8px', color:'rgba(245,239,230,0.4)', fontSize:'0.67rem', cursor:'pointer', padding:'6px', fontFamily:'Inter, sans-serif', transition:'all 0.2s' }}
-                    onMouseEnter={e=>{e.currentTarget.style.background='rgba(245,239,230,0.08)';e.currentTarget.style.color='rgba(245,239,230,0.72)';}}
-                    onMouseLeave={e=>{e.currentTarget.style.background='rgba(245,239,230,0.04)';e.currentTarget.style.color='rgba(245,239,230,0.4)';}}
-                  >{hasDone ? 'Edit review →' : 'Start review →'}</button>
-                </div>
-              );
-            })}
+
           </div>
           )}
 

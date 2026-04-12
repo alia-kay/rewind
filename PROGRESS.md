@@ -1,7 +1,7 @@
 # Tonight? — Progress Notes
 
 ## What it is
-A single-page web app for a tired mom with 1–2 hours of free time after her toddler goes to bed. She opens the app, checks in with how she's feeling, and gets a personalised activity recommendation — or writes a journal entry first. All data is private — stored only in her browser's `localStorage`, no backend.
+A web app for a people to write in a journal. All data is private — stored only in her browser's `localStorage`, no backend.
 
 ## Current implementation
 Single `index.html` file. React 18 via CDN, Tailwind CSS via CDN (play), Babel standalone for JSX. No build step, no backend, no login.
@@ -293,6 +293,112 @@ When `false`, the following are hidden (not removed):
 
 The Activities page component, all activity-related code, localStorage data, and logic remain intact.
 To restore everything: change `const SHOW_ACTIVITIES = false;` → `const SHOW_ACTIVITIES = true;`.
+
+---
+
+---
+
+## Navigation redesign (recent)
+
+Replaced the top nav bar with a dual-component layout:
+
+**`BrandHeader`** — decorative fixed-top strip with candle flame SVG + "unwind" wordmark. Only visible on non-screen routes (Today / Intentions / Reviews / History tabs).
+
+**`BottomNav`** — 5-tab fixed-bottom bar (64px, `z-index: 100`, slightly transparent navy with backdrop blur):
+- Today · Intentions · [+] Write · Reviews · History
+- The center "+" is a raised 52px terracotta circle (`translateY(-10px)`), always triggers the write flow regardless of current tab
+- Active tab in terracotta (`#e8987a`), inactive in muted cream
+
+**App routing model:**
+- `tab` state: `'today' | 'intentions' | 'reviews' | 'history'`
+- `screen` state: `null | 'flowSelector' | 'emotionalFlow' | 'journal' | 'questions' | 'results'`
+- When `screen !== null`, BrandHeader and BottomNav are still shown (BottomNav with no active tab highlighted)
+- Intentions / Reviews / History all render `<CalendarScreen currentTab={tab} />` — shared component, preserves all state (review overlay, nav years) across tab switches
+
+**CalendarScreen tab routing:**
+- `currentTab === 'intentions'` → month navigator + IntentionCards (month first, then weeks, current week pinned first)
+- `currentTab === 'reviews'` → Reviews & Insights (see below)
+- `currentTab === 'history'` → calendar grid + entry viewer (auto-selects today on first mount if today has entries)
+
+**Review overlay** is `position: fixed, bottom: 64px, z-index: 200` — covers content but respects the bottom nav.
+
+---
+
+## Reviews & Insights tab
+
+The Reviews tab was redesigned to include pattern-based insights alongside review cards.
+
+**Layout:**
+- Header: "Reviews & Insights" + Week / Month pill toggle
+- Month navigator (right-aligned)
+- Week view: collapsible accordion rows — header shows week label + status badge. Expanded: inline insights for the week + last review word + start/edit button
+- Month view: monthly insight block (up to 4 lines, serif italic, muted) + terracotta month review card
+
+**Status badges** use muted dark-mode colors:
+- Done: `rgba(76,130,70,0.22)` / `#5a9150`
+- Pending: `rgba(160,110,50,0.22)` / `#9a7030`
+- Not yet: muted cream on very low alpha
+
+---
+
+## Insight engine (`js/lib/insights.js`, inlined in index.html)
+
+Pure localStorage analysis layer. No AI, no network calls.
+
+**Storage helpers added:**
+- `getInsightLastShownDaily()` — reads `insight_last_shown_daily` from localStorage: `{ date, key }`
+- `saveInsightLastShownDaily(key)` — saves template key + today's date
+
+**Analysis functions:**
+- `getEntriesForRange(startStr, endStr)` — flat array of all entries in date range
+- `getCheckInEntries(entries)` / `getEmotionalEntries(entries)` — flow type filters
+- `getMostFrequent(arr)` — most common value in array
+- `getInsightStreak()` — consecutive days with entries ending today
+- `getFieldRate(entries, field, value)` — fraction of entries matching a field value
+- `getWeekAvg(entries, field)` — most common field value (used as "average" for categorical data)
+- `getEmoBranchFreq(entries)` — most common `emotionalBranch` in emotional entries
+- `getRepeatedFocusWords(weekKeys)` — focus words appearing in 2+ intentions
+- `getTopicKeywords(entries)` — top recurring non-stop words from journal text
+- `getJournalBehaviour(entries)` — dominant journaling time ('early' / 'evening' / 'late')
+
+**Template library (`IT` object, 17 templates):** body / head / stress / emotional / behaviour / intention / cross-signal / topic / encouragement categories. Each is a function that takes a parameter and returns a natural-language sentence.
+
+**Insight generators:**
+- `generateDailyInsight()` → `{ key, text }` or `null`. Requires 3+ entries in last 14 days. Builds a priority-ordered candidate list; avoids repeating the same template key in the same calendar day. Saves chosen key via `saveInsightLastShownDaily`.
+- `generateWeeklyInsights(weekKey)` → array of `{ key, text }` (up to 3). Used by the Reviews accordion when a week row is expanded.
+- `generateMonthlyInsights(monthKey)` → array of `{ key, text }` (up to 4). Used by the month view above the review card.
+
+**Daily insight card (TodayScreen):**
+- Renders below IntentionCards at the bottom of the Today container
+- Soft divider above, then serif italic text at 13px, muted (`rgba(245,239,230,0.35)`)
+- No label — just the sentence
+- Driven by `dailyInsight` state; refreshes via `useEffect` on `[entries]` so new check-ins trigger a re-evaluation
+
+---
+
+## "Work through a feeling" (EmotionalFlowScreen)
+
+The second journaling mode — triggered by the "Explore a feeling" option in the flow selector.
+
+**Branch detection:** The first question asks "What's coming up for you right now?" (free text). On advance, the answer text is scanned for keywords to detect a branch:
+- `grief`, `loss`, `miss`, `gone` → `grief`
+- `anxious`, `worry`, `panic`, `scared` → `anxiety`
+- `angry`, `anger`, `frustrat`, `furious` → `anger`
+- `lonely`, `alone`, `isolat` → `loneliness`
+- `overwhelm`, `too much`, `can't cope` → `overwhelm`
+- default → `sadness`
+
+The detected branch is stored as `entry.emotionalBranch`.
+
+**Follow-up questions (Q2–Q5):** Chosen from a branch-specific pool of 4–5 questions. Examples:
+- grief: "What are you missing most right now?" / "What do you wish they knew?"
+- anxiety: "What's the worst-case you're picturing?" / "What would help you feel safer right now?"
+- anger: "What exactly are you angry about?" / "What boundary was crossed?"
+- loneliness: "When did this loneliness start?" / "What kind of connection do you need?"
+- overwhelm: "What's taking up the most space right now?" / "What can you put down for tonight?"
+- sadness (default): "Where do you feel this in your body?" / "What does this sadness need from you?"
+
+Entries from this flow have `flowType: 'emotional'` and `emotionalFlow: [{ question, answer }]` instead of the `prompts` array used by check-in entries.
 
 ---
 
