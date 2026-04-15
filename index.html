@@ -1198,8 +1198,9 @@
         const id       = entry.id;
         const expanded = expandedId === id;
         const editing  = editingId === id;
-        const isCheckin = entry.flowType !== 'emotional';
-        const flowLabel = isCheckin ? 'Check in' : 'Explore a feeling';
+        const isCheckin = entry.flowType !== 'emotional' && entry.flowType !== 'parent';
+        const isParent  = entry.flowType === 'parent';
+        const flowLabel = isParent ? 'As a parent' : isCheckin ? 'Check in' : 'Explore a feeling';
         const preview   = entryPreview(entry);
         const time      = entryTime(entry);
 
@@ -1290,7 +1291,7 @@
                         {entry.stressIntensity && <span style={{ background:'rgba(245,239,230,0.07)', borderRadius:'20px', padding:'3px 10px', fontSize:'0.75rem', color:'rgba(245,239,230,0.55)', fontFamily:'Inter, sans-serif' }}>{stressEmoji[entry.stressIntensity]} {stressLabel[entry.stressIntensity]}</span>}
                       </div>
                     )}
-                    {isCheckin && (
+                    {(isCheckin || isParent) && (
                       <div style={{ display:'flex', flexDirection:'column', gap:'10px' }}>
                         {(entry.prompts||[]).map((p,i)=>(
                           <div key={i}>
@@ -1301,7 +1302,7 @@
                         {entry.notes && (<><div style={{ borderTop:'0.5px solid rgba(245,239,230,0.08)', margin:'10px 0 6px' }} /><p style={{ color:'rgba(245,239,230,0.55)', fontSize:'0.84rem', lineHeight:1.6, fontFamily:'Inter, sans-serif', whiteSpace:'pre-wrap' }}>{entry.notes}</p></>)}
                       </div>
                     )}
-                    {!isCheckin && (
+                    {!isCheckin && !isParent && (
                       <div style={{ display:'flex', flexDirection:'column', gap:'10px' }}>
                         {(entry.emotionalFlow||[]).map((f,i)=>(
                           f.answer ? <div key={i}><p style={{ color:'#f5efe6', fontSize:'0.84rem', lineHeight:1.6, fontFamily:'Inter, sans-serif', whiteSpace:'pre-wrap' }}>{f.answer}</p></div> : null
@@ -1994,7 +1995,7 @@
     // ─────────────────────────────────────────────
     //  FLOW SELECTOR SCREEN
     // ─────────────────────────────────────────────
-    function FlowSelectorScreen({ onCheckin, onEmotional, onBack }) {
+    function FlowSelectorScreen({ onCheckin, onEmotional, onParent, onBack }) {
       const cardBase = {
         display: 'flex', flexDirection: 'column', gap: '6px',
         background: 'rgba(245,239,230,0.05)', border: '1px solid rgba(245,239,230,0.1)',
@@ -2021,6 +2022,13 @@
             >
               <span style={{ color: '#f5efe6', fontSize: '1rem', fontWeight: 600, fontFamily: 'Inter, sans-serif' }}>Work through a feeling</span>
               <span style={{ color: 'rgba(245,239,230,0.45)', fontSize: '0.88rem', fontFamily: 'Inter, sans-serif', lineHeight: 1.5 }}>Explore what's on your mind, one question at a time.</span>
+            </button>
+            <button style={cardBase} onClick={onParent}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(245,239,230,0.09)'; e.currentTarget.style.borderColor = 'rgba(196,113,79,0.5)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(245,239,230,0.05)'; e.currentTarget.style.borderColor = 'rgba(245,239,230,0.1)'; }}
+            >
+              <span style={{ color: '#f5efe6', fontSize: '1rem', fontWeight: 600, fontFamily: 'Inter, sans-serif' }}>As a parent</span>
+              <span style={{ color: 'rgba(245,239,230,0.45)', fontSize: '0.88rem', fontFamily: 'Inter, sans-serif', lineHeight: 1.5 }}>A space just for this part of you.</span>
             </button>
             <div style={{ ...cardBase, cursor: 'default', opacity: 0.5 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -2309,6 +2317,201 @@
             <h2 className="font-serif text-cream" style={{ fontSize: 'clamp(1.2rem,5vw,1.5rem)', fontWeight: 500, fontStyle: 'italic', lineHeight: 1.5, marginBottom: '28px' }}>{getQ5()}</h2>
             <textarea value={q5Text} onChange={e => setQ5Text(e.target.value)} placeholder="Whatever comes up..." style={textAreaStyle} />
             {continueBtn(() => handleQ5(q5Text), 'Finish →')}
+          </div>
+        );
+      }
+
+      return null;
+    }
+
+    // ─────────────────────────────────────────────
+    //  PARENT JOURNAL FLOW
+    // ─────────────────────────────────────────────
+    function ParentFlowScreen({ onDone, onBack }) {
+      const today = todayStr();
+      const [entryId] = useState(() => Date.now().toString());
+      const [step, setStep] = useState(0); // 0=intro, 1=Q1, 2=Q2, 3=Q3, 4=Q4, 5=closing
+      const [q1Info] = useState(() => {
+        const last = getParentFlowLastQ1s();
+        const available = PARENT_Q1_POOL.map((_, i) => i).filter(i => !last.includes(i));
+        const pool = available.length > 0 ? available : PARENT_Q1_POOL.map((_, i) => i);
+        const idx = pool[Math.floor(Math.random() * pool.length)];
+        saveParentFlowLastQ1s([...last, idx].slice(-3));
+        return { q: PARENT_Q1_POOL[idx], idx };
+      });
+      const [category, setCategory] = useState(null);
+      const [prompts, setPrompts] = useState([]);
+      const [savedScreen, setSavedScreen] = useState(false);
+      const [hasCrisis, setHasCrisis] = useState(false);
+      const [q1Text, setQ1Text] = useState('');
+      const [q2Text, setQ2Text] = useState('');
+      const [q3Text, setQ3Text] = useState('');
+      const [q4Text, setQ4Text] = useState('');
+
+      useEffect(() => {
+        if (step === 0) { const t = setTimeout(() => setStep(1), 2000); return () => clearTimeout(t); }
+      }, [step]);
+
+      function autosave(newPrompts, cat) {
+        upsertEntryById(today, entryId, { date: today, flowType: 'parent', momFlowCategory: cat !== undefined ? cat : category, prompts: newPrompts });
+      }
+
+      function handleQ1(text) {
+        const cat = detectParentCategory(text);
+        const np = [{ question: q1Info.q, answer: text }];
+        setCategory(cat); setPrompts(np); autosave(np, cat); setStep(2);
+      }
+      function handleQ2(answer) {
+        const cat = category || 'default';
+        const np = [...prompts, { question: PARENT_FLOW_BY_CATEGORY[cat].q2.q, answer }];
+        setPrompts(np); autosave(np, cat); setStep(3);
+      }
+      function handleQ3(answer) {
+        const cat = category || 'default';
+        const np = [...prompts, { question: PARENT_FLOW_BY_CATEGORY[cat].q3.q, answer }];
+        setPrompts(np); autosave(np, cat); setStep(4);
+      }
+      function handleQ4(text) {
+        const cat = category || 'default';
+        const np = [...prompts, { question: PARENT_FLOW_BY_CATEGORY[cat].q4.q, answer: text }];
+        const crisis = PARENT_CRISIS_KEYWORDS.test([q1Text, q2Text, q3Text, text].join(' '));
+        setHasCrisis(crisis); setPrompts(np); autosave(np, cat); setStep(5);
+      }
+      function handleSave() {
+        const cat = category || 'default';
+        upsertEntryById(today, entryId, { date: today, flowType: 'parent', momFlowCategory: cat, prompts });
+        setSavedScreen(true);
+      }
+
+      const textAreaStyle = { background: 'rgba(245,239,230,0.06)', border: '1px solid rgba(245,239,230,0.12)', borderRadius: '16px', padding: '18px', color: '#f5efe6', fontSize: '1rem', lineHeight: 1.7, resize: 'none', outline: 'none', width: '100%', boxSizing: 'border-box', minHeight: '200px', fontFamily: 'Inter, sans-serif' };
+      const continueBtn = (onClick, label = 'Continue →') => (
+        <button onClick={onClick}
+          style={{ width: '100%', background: '#c4714f', color: '#f5efe6', border: 'none', borderRadius: '16px', padding: '16px', fontSize: '1rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'Inter, sans-serif', boxShadow: '0 4px 20px rgba(196,113,79,0.3)', transition: 'all 0.2s ease', marginTop: '16px' }}
+          onMouseEnter={e => e.currentTarget.style.background='#a35a3a'} onMouseLeave={e => e.currentTarget.style.background='#c4714f'}
+        >{label}</button>
+      );
+      const optionBtn = (label, onClick) => (
+        <button key={label} onClick={onClick}
+          style={{ display: 'flex', alignItems: 'center', background: 'rgba(245,239,230,0.05)', border: '1px solid rgba(245,239,230,0.1)', borderRadius: '16px', padding: '16px 20px', cursor: 'pointer', textAlign: 'left', width: '100%', transition: 'all 0.2s ease', color: '#f5efe6', fontFamily: 'Inter, sans-serif', fontSize: '1rem', fontWeight: 500, marginBottom: '8px' }}
+          onMouseEnter={e => { e.currentTarget.style.background='rgba(245,239,230,0.09)'; e.currentTarget.style.borderColor='rgba(196,113,79,0.5)'; }}
+          onMouseLeave={e => { e.currentTarget.style.background='rgba(245,239,230,0.05)'; e.currentTarget.style.borderColor='rgba(245,239,230,0.1)'; }}
+        >{label}</button>
+      );
+      const totalSteps = 4;
+      const wrapStyle = { width: '100%', maxWidth: '480px', paddingTop: '28px', paddingBottom: '48px', paddingLeft: '20px', paddingRight: '20px', boxSizing: 'border-box' };
+      const backBtn = (onClick) => (
+        <button onClick={onClick} style={{ background: 'none', border: 'none', color: 'rgba(245,239,230,0.4)', fontSize: '0.88rem', cursor: 'pointer', marginBottom: '20px', padding: 0, fontFamily: 'Inter, sans-serif', display: 'block' }}>← Back</button>
+      );
+
+      if (savedScreen) {
+        return (
+          <div className="fade-in flex flex-col items-center justify-center px-5 text-center" style={{ maxWidth: '480px', width: '100%', minHeight: 'calc(100vh - 56px)', paddingTop: '40px', paddingBottom: '48px' }}>
+            <h2 className="font-serif text-cream" style={{ fontSize: 'clamp(1.6rem, 6vw, 2.2rem)', fontWeight: 600, marginBottom: '16px' }}>Saved ✓</h2>
+            <p className="font-serif" style={{ color: 'rgba(245,239,230,0.6)', fontSize: '1rem', fontStyle: 'italic', marginBottom: '40px', lineHeight: 1.65 }}>{PARENT_FLOW_BY_CATEGORY[category || 'default'].closing}</p>
+            <button onClick={onDone}
+              style={{ width: '100%', background: '#c4714f', color: '#f5efe6', border: 'none', borderRadius: '16px', padding: '16px', fontSize: '1rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'Inter, sans-serif', boxShadow: '0 4px 20px rgba(196,113,79,0.3)', transition: 'all 0.2s ease' }}
+              onMouseEnter={e => e.currentTarget.style.background='#a35a3a'} onMouseLeave={e => e.currentTarget.style.background='#c4714f'}
+            >Go to Journal</button>
+          </div>
+        );
+      }
+
+      if (step === 0) {
+        return (
+          <div className="fade-in flex flex-col items-center justify-center px-5 text-center" onClick={() => setStep(1)}
+            style={{ maxWidth: '480px', width: '100%', minHeight: 'calc(100vh - 56px)', cursor: 'pointer', paddingTop: '40px', paddingBottom: '48px' }}>
+            <p className="font-serif text-cream" style={{ fontSize: 'clamp(1.3rem,5vw,1.65rem)', fontStyle: 'italic', fontWeight: 500, lineHeight: 1.55, marginBottom: '16px' }}>This space is just for you.</p>
+            <p style={{ color: 'rgba(245,239,230,0.4)', fontSize: '0.88rem', fontFamily: 'Inter, sans-serif' }}>Not the parent. You.</p>
+          </div>
+        );
+      }
+
+      if (step === 5) {
+        const cat = category || 'default';
+        return (
+          <div className="fade-in flex flex-col items-center justify-center px-5 text-center" style={{ maxWidth: '480px', width: '100%', minHeight: 'calc(100vh - 56px)', paddingTop: '40px', paddingBottom: '48px', position: 'relative' }}>
+            <div style={{ position: 'absolute', top: '28px', left: '20px' }}>{backBtn(() => setStep(4))}</div>
+            <p className="font-serif text-cream" style={{ fontSize: 'clamp(1.2rem,5vw,1.55rem)', fontStyle: 'italic', fontWeight: 500, lineHeight: 1.55, marginBottom: '40px' }}>{PARENT_FLOW_BY_CATEGORY[cat].closing}</p>
+            {hasCrisis && (
+              <div style={{ background: 'rgba(196,113,79,0.1)', border: '1px solid rgba(196,113,79,0.25)', borderRadius: '14px', padding: '18px 20px', marginBottom: '24px', textAlign: 'left' }}>
+                <p style={{ color: 'rgba(245,239,230,0.85)', fontSize: '0.93rem', fontFamily: 'Inter, sans-serif', lineHeight: 1.65, margin: 0 }}>
+                  What you're feeling sounds very heavy. If you need support, please reach out to the <strong>Crisis Text Line</strong> — text HOME to 741741. You don't have to carry this alone.
+                </p>
+              </div>
+            )}
+            {continueBtn(handleSave, 'Save & finish')}
+          </div>
+        );
+      }
+
+      if (step === 1) {
+        return (
+          <div className="fade-in" style={wrapStyle}>
+            {backBtn(onBack)}
+            <ProgressDots current={0} total={totalSteps} />
+            <h2 className="font-serif text-cream" style={{ fontSize: 'clamp(1.2rem,5vw,1.5rem)', fontWeight: 500, fontStyle: 'italic', lineHeight: 1.5, marginBottom: '28px' }}>{q1Info.q}</h2>
+            <textarea value={q1Text} onChange={e => setQ1Text(e.target.value)} placeholder="Whatever comes up..." style={textAreaStyle} />
+            {continueBtn(() => { if (q1Text.trim()) handleQ1(q1Text); })}
+          </div>
+        );
+      }
+
+      if (step === 2) {
+        const cat = category || 'default';
+        const q2 = PARENT_FLOW_BY_CATEGORY[cat].q2;
+        return (
+          <div className="fade-in" style={wrapStyle}>
+            {backBtn(() => setStep(1))}
+            <ProgressDots current={1} total={totalSteps} />
+            <h2 className="font-serif text-cream" style={{ fontSize: 'clamp(1.2rem,5vw,1.5rem)', fontWeight: 500, fontStyle: 'italic', lineHeight: 1.5, marginBottom: '28px' }}>{q2.q}</h2>
+            {q2.type === 'text' ? (
+              <>
+                <textarea value={q2Text} onChange={e => setQ2Text(e.target.value)} placeholder="Whatever comes up..." style={textAreaStyle} />
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  {q2.skippable && <button onClick={() => handleQ2('')} style={{ marginTop: '16px', background: 'none', border: 'none', color: 'rgba(245,239,230,0.35)', fontSize: '0.88rem', cursor: 'pointer', fontFamily: 'Inter, sans-serif', padding: 0 }}>Skip</button>}
+                  {continueBtn(() => handleQ2(q2Text))}
+                </div>
+              </>
+            ) : (
+              <div>{q2.opts.map(opt => optionBtn(opt, () => handleQ2(opt)))}</div>
+            )}
+          </div>
+        );
+      }
+
+      if (step === 3) {
+        const cat = category || 'default';
+        const q3 = PARENT_FLOW_BY_CATEGORY[cat].q3;
+        return (
+          <div className="fade-in" style={wrapStyle}>
+            {backBtn(() => setStep(2))}
+            <ProgressDots current={2} total={totalSteps} />
+            <h2 className="font-serif text-cream" style={{ fontSize: 'clamp(1.2rem,5vw,1.5rem)', fontWeight: 500, fontStyle: 'italic', lineHeight: 1.5, marginBottom: '28px' }}>{q3.q}</h2>
+            {q3.type === 'text' ? (
+              <>
+                <textarea value={q3Text} onChange={e => setQ3Text(e.target.value)} placeholder="Whatever comes up..." style={textAreaStyle} />
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  {q3.skippable && <button onClick={() => handleQ3('')} style={{ marginTop: '16px', background: 'none', border: 'none', color: 'rgba(245,239,230,0.35)', fontSize: '0.88rem', cursor: 'pointer', fontFamily: 'Inter, sans-serif', padding: 0 }}>Skip</button>}
+                  {continueBtn(() => handleQ3(q3Text))}
+                </div>
+              </>
+            ) : (
+              <div>{q3.opts.map(opt => optionBtn(opt, () => handleQ3(opt)))}</div>
+            )}
+          </div>
+        );
+      }
+
+      if (step === 4) {
+        const cat = category || 'default';
+        const q4 = PARENT_FLOW_BY_CATEGORY[cat].q4;
+        return (
+          <div className="fade-in" style={wrapStyle}>
+            {backBtn(() => setStep(3))}
+            <ProgressDots current={3} total={totalSteps} />
+            <h2 className="font-serif text-cream" style={{ fontSize: 'clamp(1.2rem,5vw,1.5rem)', fontWeight: 500, fontStyle: 'italic', lineHeight: 1.5, marginBottom: '28px' }}>{q4.q}</h2>
+            <textarea value={q4Text} onChange={e => setQ4Text(e.target.value)} placeholder="Whatever comes up..." style={textAreaStyle} />
+            {continueBtn(() => handleQ4(q4Text), 'Finish →')}
           </div>
         );
       }
@@ -2908,6 +3111,100 @@
     }
 
     // ─────────────────────────────────────────────
+    //  PARENT FLOW DATA & HELPERS
+    // ─────────────────────────────────────────────
+
+    const PARENT_Q1_POOL = [
+      "What was the hardest part of today for you — not for your kids, but for you?",
+      "When did you last feel like yourself — not a parent, not a caregiver, just you?",
+      "What are you carrying right now that no one else can see?",
+      "What did you feel guilty about today?",
+      "How does your body feel right now, honestly?",
+      "What's something you wish your partner understood about your days?",
+      "When did you last rest — really rest?",
+      "What's the hardest thing about parenting right now that you haven't said out loud?",
+      "What did you give today that you didn't have?",
+      "What would you need tomorrow to feel like a better version of yourself?",
+      "What part of yourself do you feel like you've lost since becoming a parent?",
+      "Is there anything you've been avoiding feeling lately?",
+      "What decision are you second-guessing right now?",
+      "What's one thing you did today just for you — or couldn't?",
+      "What would feel like a small miracle right now?",
+    ];
+
+    const PARENT_CRISIS_KEYWORDS = /crisis|can't go on|don't want to be here|disappear|hurt myself|harm|end it|not worth it|no point/i;
+
+    const PARENT_FLOW_BY_CATEGORY = {
+      identity: {
+        q2: { type: 'options', q: "Is it more that you feel like that version of yourself is gone — or that she's still there, buried under everything?", opts: ["Gone. I don't know if she's coming back.", "Buried — she's still in there somewhere.", "I'm not sure anymore."] },
+        q3: { type: 'text', q: "What did she care about — before all of this? What made her feel most like herself?" },
+        q4: { type: 'text', q: "What's one small thing that still connects you to her, even now?" },
+        closing: "Being a parent takes so much of you. But you're still in there. Tonight you proved it — you named what's missing. That's not nothing.",
+      },
+      invisibleload: {
+        q2: { type: 'options', q: "Is it the doing — or the knowing? The constant managing in your head, even when you're not actively doing anything?", opts: ["The doing. It never stops.", "The knowing — the mental load is crushing.", "Both, equally."] },
+        q3: { type: 'text', q: "What's one thing you manage that takes the most from you — even though no one would notice if you stopped?" },
+        q4: { type: 'text', q: "What would it look like if you could actually share this load? Even just a little?" },
+        closing: "You carry more than anyone sees. Naming it doesn't make it lighter — but it makes it real. And real things can change.",
+      },
+      guilt: {
+        q2: { type: 'options', q: "Is the guilt about something you did, something you didn't do, or the way you felt?", opts: ["Something I did.", "Something I didn't do.", "The way I felt.", "All of it."] },
+        q3: { type: 'text', q: "What do you think a 'good enough' parent would have done differently in that moment?" },
+        q4: { type: 'text', q: "If your child grew up and told you they'd made the same choice — what would you tell them?" },
+        closing: "Guilt means you care. But caring isn't the same as failing. You showed up here tonight, for yourself — that's what a good enough parent does.",
+      },
+      body: {
+        q2: { type: 'text', q: "When did you last feel at home in your body — rested, comfortable, present? Even briefly." },
+        q3: { type: 'options', q: "What does your body need most right now that it's not getting?", opts: ["Sleep", "Movement", "Food / nourishment", "To be touched with care", "To just be still"] },
+        q4: { type: 'text', q: "What's one small way you could listen to what your body is asking for tonight?" },
+        closing: "Your body has been talking to you. You heard it tonight. That's the first step.",
+      },
+      relationship: {
+        q2: { type: 'options', q: "Is this about feeling unsupported, feeling unseen, or feeling more alone than you expected?", opts: ["Unsupported", "Unseen", "More alone than I expected", "All of it"] },
+        q3: { type: 'text', q: "What do you wish they understood, without you having to explain it first?" },
+        q4: { type: 'text', q: "What do you need from them right now that you haven't been able to ask for?" },
+        closing: "Wanting more from the people you love isn't too much to ask. You deserve to feel seen here too.",
+      },
+      rest: {
+        q2: { type: 'options', q: "What kind of rest do you actually need?", opts: ["Physical rest", "Mental quiet", "Emotional space", "All of it", "I don't know anymore"] },
+        q3: { type: 'text', q: "When did you last have that kind of rest — or something close to it?" },
+        q4: { type: 'text', q: "What's one thing standing between you and getting it?" },
+        closing: "Rest isn't something you can earn later. Tonight you admitted you need it. That's already something.",
+      },
+      hardmoments: {
+        q2: { type: 'text', q: "Can you say more about what's feeling so heavy right now? You don't have to.", skippable: true },
+        q3: { type: 'text', q: "What would it mean to get through today? Not fix it — just get through." },
+        q4: { type: 'text', q: "Is there one person you could reach toward tonight — not to solve anything, just to not be alone?" },
+        closing: "You're still here. That matters more than you know right now.",
+      },
+      default: {
+        q2: { type: 'options', q: "Does this feel more like exhaustion — running on empty — or more like grief for something you can't quite name?", opts: ["Exhaustion", "Something like grief", "Both", "Something else entirely"] },
+        q3: { type: 'text', q: "What would you say to another parent going through exactly this right now?" },
+        q4: { type: 'text', q: "What would help most right now — connection, space, rest, or just to be seen?" },
+        closing: "Parenting is heavy and invisible and relentless. You still took a moment for yourself tonight.",
+      },
+    };
+
+    function getParentFlowLastQ1s() {
+      try { const s = localStorage.getItem('parent_flow_last_q1s'); return s ? JSON.parse(s) : []; } catch { return []; }
+    }
+    function saveParentFlowLastQ1s(arr) {
+      try { localStorage.setItem('parent_flow_last_q1s', JSON.stringify(arr)); } catch {}
+    }
+
+    function detectParentCategory(text) {
+      const t = text.toLowerCase();
+      if (PARENT_CRISIS_KEYWORDS.test(t)) return 'hardmoments';
+      if (/guilty|guilt|bad mom|bad parent|should have|shouldn't|failed|messed up|regret|apologize|my fault/.test(t)) return 'guilt';
+      if (/invisible|no one sees|mental load|keep track|manage everything|coordinate|remember everything|logistics/.test(t)) return 'invisibleload';
+      if (/who i am|lost myself|identity|before kids|used to be|version of me|don't know who i am|forgot who/.test(t)) return 'identity';
+      if (/partner|husband|wife|relationship|marriage|together|communication|understand me|feel alone with/.test(t)) return 'relationship';
+      if (/rest|break|alone time|quiet|peace|breathe|recharge|me time|escape|time for myself/.test(t)) return 'rest';
+      if (/tired|exhausted|body|physical|sleep|pain|sick|energy|drained|aching/.test(t)) return 'body';
+      return 'default';
+    }
+
+    // ─────────────────────────────────────────────
     //  INSIGHT ENGINE  (js/lib/insights.js inlined)
     // ─────────────────────────────────────────────
 
@@ -2994,6 +3291,7 @@
       cross_clear_calm:   ()   => `Clear-headed and calm on the same day — that's a combination worth remembering.`,
       topic_recurring:    w    => `The word "${w}" keeps appearing in what you write. Worth sitting with.`,
       milestone:          n    => `${n} entries this month. You keep showing up.`,
+      parent_cat_recurring: (cat, n) => { const m = { identity: 'who you are beyond motherhood', invisibleload: 'the invisible weight you carry', guilt: 'guilt', body: 'your body and rest', relationship: 'your relationship', rest: 'rest and space for yourself', hardmoments: 'the hardest parts', default: "what you're carrying" }; return `You've come back to ${m[cat]||'this'} ${n} time${n>1?'s':''} in your parent sessions. It's clearly something that needs space.`; },
     };
 
     function generateDailyInsight() {
@@ -3031,6 +3329,13 @@
       if (emotional.length>=2) {
         const b=getEmoBranchFreq(recent); if (b) add('emotional_frequent',IT.emotional_frequent(b),2);
         add('emotional_explore',IT.emotional_explore(emotional.length),4);
+      }
+      const parentEs=recent.filter(e=>e.flowType==='parent');
+      if (parentEs.length>=2) {
+        const cats=parentEs.map(e=>e.momFlowCategory).filter(Boolean);
+        const catC={};for(const c of cats)catC[c]=(catC[c]||0)+1;
+        const topCat=Object.entries(catC).filter(([,n])=>n>=2).sort((a,b)=>b[1]-a[1])[0];
+        if (topCat) add('parent_cat_recurring',IT.parent_cat_recurring(topCat[0],topCat[1]),2);
       }
       const beh=getJournalBehaviour(recent);
       if (beh==='late') add('late_habit',IT.late_habit(),5);
@@ -3820,9 +4125,10 @@
                   const id = entry.id;
                   const expanded = calExpandedId === id;
                   const editing  = calEditingId === id;
-                  const isCheckin = entry.flowType !== 'emotional';
-                  const flowLabel = isCheckin ? 'Check in' : 'Explore a feeling';
-                  const preview = isCheckin ? (entry.prompts||[])[0]?.answer||'' : (entry.emotionalFlow||[])[0]?.answer||'';
+                  const isCheckin = entry.flowType !== 'emotional' && entry.flowType !== 'parent';
+                  const isParent  = entry.flowType === 'parent';
+                  const flowLabel = isParent ? 'As a parent' : isCheckin ? 'Check in' : 'Explore a feeling';
+                  const preview = (isCheckin || isParent) ? (entry.prompts||[])[0]?.answer||'' : (entry.emotionalFlow||[])[0]?.answer||'';
                   const time = entry.createdAt ? (() => { try { return new Date(entry.createdAt).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true}).toLowerCase(); } catch { return ''; } })() : '';
                   return (
                     <div key={id} style={{ background:'rgba(245,239,230,0.05)', border:`1px solid ${expanded?'rgba(196,113,79,0.28)':'rgba(245,239,230,0.09)'}`, borderRadius:'14px', marginBottom:'10px', overflow:'hidden', transition:'border-color 0.2s' }}>
@@ -3898,7 +4204,7 @@
                                   {entry.stressIntensity && <span style={{ background:'rgba(245,239,230,0.07)', borderRadius:'20px', padding:'4px 11px', fontSize:'0.79rem', color:'rgba(245,239,230,0.6)', fontFamily:'Inter, sans-serif' }}>{stressEmoji[entry.stressIntensity]} {stressLabel[entry.stressIntensity]}</span>}
                                 </div>
                               )}
-                              {isCheckin && (
+                              {(isCheckin || isParent) && (
                                 <div style={{ display:'flex', flexDirection:'column', gap:'14px' }}>
                                   {(entry.prompts||[]).map((p,i)=>(
                                     <div key={i}>
@@ -3907,10 +4213,10 @@
                                     </div>
                                   ))}
                                   {entry.notes && (<><div style={{ borderTop:'0.5px solid rgba(245,239,230,0.08)', margin:'14px 0 10px' }} /><p style={{ color:'rgba(245,239,230,0.65)', fontSize:'0.88rem', lineHeight:1.6, fontFamily:'Inter, sans-serif', whiteSpace:'pre-wrap' }}>{entry.notes}</p></>)}
-                                  {entry.recommendedActivity && (<><div style={{ borderTop:'0.5px solid rgba(245,239,230,0.08)', margin:'10px 0 6px' }} /><p style={{ color:'rgba(245,239,230,0.38)', fontSize:'0.75rem', fontFamily:'Inter, sans-serif' }}>Chose that day: {entry.recommendedActivity.emoji} {entry.recommendedActivity.name}</p></>)}
+                                  {isCheckin && entry.recommendedActivity && (<><div style={{ borderTop:'0.5px solid rgba(245,239,230,0.08)', margin:'10px 0 6px' }} /><p style={{ color:'rgba(245,239,230,0.38)', fontSize:'0.75rem', fontFamily:'Inter, sans-serif' }}>Chose that day: {entry.recommendedActivity.emoji} {entry.recommendedActivity.name}</p></>)}
                                 </div>
                               )}
-                              {!isCheckin && (
+                              {!isCheckin && !isParent && (
                                 <div style={{ display:'flex', flexDirection:'column', gap:'10px' }}>
                                   {(entry.emotionalFlow||[]).map((f,i)=>f.answer?<div key={i}><p style={{ color:'#f5efe6', fontSize:'0.9rem', lineHeight:1.65, fontFamily:'Inter, sans-serif', whiteSpace:'pre-wrap' }}>{f.answer}</p></div>:null)}
                                 </div>
@@ -3943,7 +4249,7 @@
     // ─────────────────────────────────────────────
     function App() {
       const [tab,     setTab]     = useState('today');   // 'today'|'intentions'|'reviews'|'history'
-      const [screen,  setScreen]  = useState(null);       // null|'flowSelector'|'emotionalFlow'|'journal'|'questions'|'results'
+      const [screen,  setScreen]  = useState(null);       // null|'flowSelector'|'emotionalFlow'|'parentFlow'|'journal'|'questions'|'results'
       const [fading,  setFading]  = useState(false);
       const [currentQ, setCurrentQ] = useState(0);
       const [answers,  setAnswers]  = useState({});
@@ -4060,6 +4366,7 @@
                   <FlowSelectorScreen
                     onCheckin={() => transition(() => setScreen('journal'))}
                     onEmotional={() => transition(() => setScreen('emotionalFlow'))}
+                    onParent={() => transition(() => setScreen('parentFlow'))}
                     onBack={() => transition(() => setScreen(null))}
                   />
                 </div>
@@ -4070,6 +4377,14 @@
                     onDone={goToday}
                     onBack={() => transition(() => setScreen('flowSelector'))}
                     onFindActivity={null}
+                  />
+                </div>
+              )}
+              {screen === 'parentFlow' && (
+                <div style={{ display:'flex', justifyContent:'center' }}>
+                  <ParentFlowScreen
+                    onDone={goToday}
+                    onBack={() => transition(() => setScreen('flowSelector'))}
                   />
                 </div>
               )}
