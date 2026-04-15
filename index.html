@@ -1148,7 +1148,7 @@
 
       const weekKey  = getWeekKey(now);
       const monthKey = getMonthKey(now.getFullYear(), now.getMonth());
-      const weekLabel = `Week of ${getWeekStart(now).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+      const weekLabel = getWeekRangeLabel(getWeekStart(now), now);
 
       const energyEmoji = { drained:'🪫', tired:'😴', neutral:'😐', good:'✨' };
       const energyLabel = { drained:'Completely drained', tired:'Tired but okay', neutral:'Neutral', good:'Surprisingly good' };
@@ -2726,6 +2726,18 @@
       const diff = date.getDate() - day + (day === 0 ? -6 : 1);
       return new Date(date.getFullYear(), date.getMonth(), diff);
     }
+    const SHORT_MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    function getWeekRangeLabel(ws, referenceNow) {
+      const we  = new Date(ws.getTime() + 6 * 86400000);
+      const fmt = d => `${SHORT_MONTHS[d.getMonth()]} ${d.getDate()}`;
+      const range = `${fmt(ws)} – ${fmt(we)}`;
+      if (!referenceNow) return range;
+      const curWk  = getWeekStart(referenceNow);
+      const nextWk = new Date(curWk.getTime() + 7 * 86400000);
+      if (ws.getTime() === curWk.getTime())  return `${range} · This week`;
+      if (ws.getTime() === nextWk.getTime()) return `${range} · Next week`;
+      return range;
+    }
     function loadIntention(key) {
       try { const s = localStorage.getItem(key); return s ? JSON.parse(s) : null; } catch { return null; }
     }
@@ -2736,7 +2748,7 @@
     // ─────────────────────────────────────────────
     //  INTENTION CARD (self-contained, used in Today + Journal)
     // ─────────────────────────────────────────────
-    function IntentionCard({ intentionKey, isMonth, label, onStartReview }) {
+    function IntentionCard({ intentionKey, isMonth, label, onStartReview, ctaLabel = null, embedded = false }) {
       const WEEK_FOCUS_WORDS  = ['Rest','Quiet','Connection','Creativity','Play','Movement','Presence','Nourishment'];
       const MONTH_FOCUS_WORDS = ['Rest','Growth','Health','Simplicity','Gratitude','Creativity','Presence','Adventure'];
       const wordPool  = isMonth ? MONTH_FOCUS_WORDS : WEEK_FOCUS_WORDS;
@@ -2779,13 +2791,24 @@
         saveIntentionData(intentionKey, updated);
       }
 
+      const outerStyle = embedded
+        ? { padding: mob ? '14px 14px 12px' : '12px 12px 10px', boxSizing:'border-box' }
+        : { background:cardBg, border: editMode ? editBorder : cardBorder, borderRadius:'14px', padding: mob ? '18px' : '14px 14px 12px', marginBottom:'12px', transition:'border-color 0.2s', boxSizing:'border-box' };
+
       return (
-        <div style={{ background:cardBg, border: editMode ? editBorder : cardBorder, borderRadius:'14px', padding: mob ? '18px' : '14px 14px 12px', marginBottom:'12px', transition:'border-color 0.2s', boxSizing:'border-box' }}>
-          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'10px' }}>
-            <span style={{ color:'rgba(245,239,230,0.42)', fontSize: mob ? '12px' : '0.67rem', fontWeight:600, letterSpacing:'0.08em', textTransform:'uppercase', fontFamily:'Inter, sans-serif' }}>{label}</span>
-            {!editMode && <button style={ghostBtn} onClick={openEdit}>Edit</button>}
-            {editMode  && <span style={{ color:'rgba(245,239,230,0.28)', fontSize:'0.63rem', fontFamily:'Inter, sans-serif' }}>editing</span>}
-          </div>
+        <div style={outerStyle}>
+          {(label || editMode || hasContent || !ctaLabel) && (
+            <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:'10px' }}>
+              {label
+                ? <span style={{ color:'rgba(245,239,230,0.42)', fontSize: mob ? '12px' : '0.67rem', fontWeight:600, letterSpacing:'0.08em', textTransform:'uppercase', fontFamily:'Inter, sans-serif' }}>{label}</span>
+                : (!editMode && hasContent && localInt.sentence)
+                  ? <p className="font-serif" style={{ color:'rgba(245,239,230,0.72)', fontSize: mob ? '15px' : '0.83rem', fontStyle:'italic', lineHeight:1.6, margin:0, flex:1, paddingRight:'8px' }}>"{localInt.sentence}"</p>
+                  : <span style={{ flex:1 }} />
+              }
+              {!editMode && (hasContent || !ctaLabel) && <button style={{ ...ghostBtn, flexShrink:0, marginTop: (!label && hasContent && localInt.sentence) ? '2px' : '0' }} onClick={openEdit}>Edit</button>}
+              {editMode  && <span style={{ color:'rgba(245,239,230,0.28)', fontSize:'0.63rem', fontFamily:'Inter, sans-serif', flexShrink:0 }}>editing</span>}
+            </div>
+          )}
 
           {editMode && editForm ? (
             <div>
@@ -2838,10 +2861,18 @@
           ) : (
             <>
               {!hasContent ? (
-                <p style={{ color:'rgba(245,239,230,0.22)', fontSize: mob ? '14px' : '0.8rem', fontStyle:'italic', fontFamily:'Lora, serif', lineHeight:1.6 }}>No intention set yet.</p>
+                ctaLabel ? (
+                  <button onClick={openEdit}
+                    style={{ width:'100%', background:'rgba(196,113,79,0.1)', border:'1px solid rgba(196,113,79,0.25)', borderRadius:'10px', color:'#e8987a', fontSize: mob ? '0.9rem' : '0.8rem', fontWeight:600, cursor:'pointer', padding: mob ? '14px' : '10px', fontFamily:'Inter, sans-serif', transition:'all 0.2s' }}
+                    onMouseEnter={e=>{e.currentTarget.style.background='rgba(196,113,79,0.18)';}}
+                    onMouseLeave={e=>{e.currentTarget.style.background='rgba(196,113,79,0.1)';}}
+                  >+ {ctaLabel}</button>
+                ) : (
+                  <p style={{ color:'rgba(245,239,230,0.22)', fontSize: mob ? '14px' : '0.8rem', fontStyle:'italic', fontFamily:'Lora, serif', lineHeight:1.6 }}>No intention set yet.</p>
+                )
               ) : (
                 <>
-                  {localInt.sentence && (
+                  {localInt.sentence && label && (
                     <p className="font-serif" style={{ color:'rgba(245,239,230,0.72)', fontSize: mob ? '15px' : '0.83rem', fontStyle:'italic', lineHeight:1.6, marginBottom:(localInt.items.length>0||localInt.focusWords.length>0)?'10px':'0' }}>"{localInt.sentence}"</p>
                   )}
                   {localInt.items.length > 0 && (
@@ -3102,6 +3133,10 @@
       const [intNavMonth, setIntNavMonth] = useState(now.getMonth());
       const [revNavYear,  setRevNavYear]  = useState(now.getFullYear());
       const [revNavMonth, setRevNavMonth] = useState(now.getMonth());
+
+      // ── Intentions tab state ─────────────────────
+      const [intView,         setIntView]         = useState('week'); // 'week' | 'month'
+      const [expandedIntWeek, setExpandedIntWeek] = useState(() => getWeekKey(now)); // current week open by default
 
       // ── Reviews & Insights tab state ──────────────
       const [revView,      setRevView]      = useState('week'); // 'week' | 'month'
@@ -3487,59 +3522,87 @@
           {/* ── Intentions ── */}
           {currentTab === 'intentions' && (
           <div style={{ maxWidth:'600px', width:'100%', margin:'0 auto', padding:'16px 20px 88px', boxSizing:'border-box' }}>
+
+            {/* Header row: title + pill toggle */}
             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'16px' }}>
               <span className="font-serif text-cream" style={{ fontSize:'1rem', fontWeight:600 }}>Intentions</span>
+              <div style={{ display:'flex', background:'rgba(245,239,230,0.05)', borderRadius:'20px', padding:'3px', gap:'2px' }}>
+                {['week','month'].map(v => (
+                  <button key={v} onClick={() => setIntView(v)}
+                    style={{ background:intView===v?'rgba(196,113,79,0.22)':'none', border:'none', borderRadius:'16px', padding:'4px 14px', fontSize:'0.73rem', fontFamily:'Inter, sans-serif', color:intView===v?'#e8987a':'rgba(245,239,230,0.38)', cursor:'pointer', fontWeight:intView===v?600:400, transition:'all 0.2s' }}
+                  >{v==='week'?'Weeks':'Month'}</button>
+                ))}
+              </div>
+            </div>
+
+            {/* Navigation */}
+            <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:'14px' }}>
               <NavArrows onPrev={prevIntMonth} onNext={nextIntMonth} label={`${MONTH_NAMES[intNavMonth].slice(0,3)} ${intNavYear}`} />
             </div>
-            <IntentionCard
-              key={`${intMonthKey}-${intRefresh}`}
-              intentionKey={intMonthKey}
-              isMonth={true}
-              label={`${MONTH_NAMES[intNavMonth]} intention`}
-              onStartReview={() => startReview('month', intMonthKey, loadReviewForKey('month', intMonthKey)?.answers)}
-            />
-            {(() => {
-              const isCurrentMonth = intNavYear === now.getFullYear() && intNavMonth === now.getMonth();
-              const currentWeekKey = getWeekKey(now);
-              if (isCurrentMonth) {
-                const currentWeek = intWeeks.find(w => w.weekKey === currentWeekKey);
-                const otherWeeks  = intWeeks.filter(w => w.weekKey !== currentWeekKey);
-                return (
-                  <>
-                    {currentWeek && (
-                      <IntentionCard
-                        key={`${currentWeek.weekKey}-${intRefresh}`}
-                        intentionKey={currentWeek.weekKey}
-                        isMonth={false}
-                        label={`Week of ${currentWeek.label}`}
-                        onStartReview={() => startReview('week', currentWeek.weekKey, loadReviewForKey('week', currentWeek.weekKey)?.answers)}
-                      />
-                    )}
-                    {currentWeek && otherWeeks.length > 0 && (
-                      <div style={{ height:'0.5px', background:'rgba(245,239,230,0.08)', margin:'0 0 12px' }} />
-                    )}
-                    {otherWeeks.map(({ weekKey: wk, label }) => (
-                      <IntentionCard
-                        key={`${wk}-${intRefresh}`}
-                        intentionKey={wk}
-                        isMonth={false}
-                        label={`Week of ${label}`}
-                        onStartReview={() => startReview('week', wk, loadReviewForKey('week', wk)?.answers)}
-                      />
-                    ))}
-                  </>
-                );
-              }
-              return intWeeks.map(({ weekKey: wk, label }) => (
+
+            {/* ── WEEK VIEW ── */}
+            {intView === 'week' && (
+              <>
+                {intWeeks.map(({ weekKey: wk, weekStart: ws }) => {
+                  const int        = loadIntention(wk);
+                  const hasContent = !!(int && (int.sentence || int.items?.length > 0 || int.focusWords?.length > 0));
+                  const isExpanded = expandedIntWeek === wk;
+                  const rowLabel   = getWeekRangeLabel(ws, now);
+                  const weekEnd    = new Date(ws.getTime() + 6 * 86400000);
+                  const todayMid   = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                  const isFuture   = weekEnd > todayMid;
+
+                  return (
+                    <div key={`${wk}-${intRefresh}`} style={{ background:'rgba(245,239,230,0.03)', border:`1px solid ${isExpanded?'rgba(196,113,79,0.18)':'rgba(245,239,230,0.07)'}`, borderRadius:'13px', marginBottom:'8px', overflow:'hidden', transition:'border-color 0.2s' }}>
+                      {/* Header — same pattern as Reviews tab */}
+                      <button onClick={() => setExpandedIntWeek(isExpanded ? null : wk)}
+                        style={{ width:'100%', display:'flex', alignItems:'center', justifyContent:'space-between', padding:'11px 12px', background:'none', border:'none', cursor:'pointer', textAlign:'left' }}>
+                        <div style={{ display:'flex', alignItems:'center', gap:'8px', flex:1, overflow:'hidden', paddingRight:'8px' }}>
+                          <span style={{ color:'rgba(245,239,230,0.38)', fontSize:'0.62rem', fontWeight:600, letterSpacing:'0.08em', textTransform:'uppercase', fontFamily:'Inter, sans-serif', flexShrink:0, whiteSpace:'nowrap' }}>{rowLabel}</span>
+                          {!isExpanded && (
+                            <span className="font-serif" style={{ color:'rgba(245,239,230,0.28)', fontSize:'0.72rem', fontStyle:'italic', overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis', minWidth:0 }}>
+                              {hasContent ? (int?.sentence || '') : 'No intention set'}
+                            </span>
+                          )}
+                        </div>
+                        <span style={{ color:'rgba(245,239,230,0.22)', fontSize:'0.72rem', flexShrink:0, marginLeft:'8px' }}>{isExpanded?'∨':'›'}</span>
+                      </button>
+
+                      {/* Expanded body */}
+                      {isExpanded && (
+                        <div style={{ borderTop:'0.5px solid rgba(245,239,230,0.07)' }}>
+                          <IntentionCard
+                            key={`${wk}-${intRefresh}-card`}
+                            intentionKey={wk}
+                            isMonth={false}
+                            ctaLabel={!hasContent ? 'Set intention for this week' : null}
+                            embedded={true}
+                            onStartReview={!isFuture ? () => startReview('week', wk, loadReviewForKey('week', wk)?.answers) : null}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </>
+            )}
+
+            {/* ── MONTH VIEW ── */}
+            {intView === 'month' && (() => {
+              const mInt = loadIntention(intMonthKey);
+              const mHasContent = !!(mInt && (mInt.sentence || mInt.items?.length > 0 || mInt.focusWords?.length > 0));
+              return (
                 <IntentionCard
-                  key={`${wk}-${intRefresh}`}
-                  intentionKey={wk}
-                  isMonth={false}
-                  label={`Week of ${label}`}
-                  onStartReview={() => startReview('week', wk, loadReviewForKey('week', wk)?.answers)}
+                  key={`${intMonthKey}-${intRefresh}`}
+                  intentionKey={intMonthKey}
+                  isMonth={true}
+                  label={`${MONTH_NAMES[intNavMonth]} intention`}
+                  ctaLabel={!mHasContent ? `Set intention for ${MONTH_NAMES[intNavMonth]}` : null}
+                  onStartReview={() => startReview('month', intMonthKey, loadReviewForKey('month', intMonthKey)?.answers)}
                 />
-              ));
+              );
             })()}
+
           </div>
           )}
 
@@ -3565,7 +3628,7 @@
             </div>
 
             {/* ── WEEK VIEW ── */}
-            {revView === 'week' && revWeeks.map(({ weekKey: wk, label }) => {
+            {revView === 'week' && revWeeks.map(({ weekKey: wk, weekStart: ws }) => {
               const review = loadReviewForKey('week', wk);
               const hasDone = !!review;
               const intention = loadIntention(wk);
@@ -3577,13 +3640,14 @@
                 : { label:'Not yet', bg:'rgba(245,239,230,0.06)', color:'rgba(245,239,230,0.35)' };
               const isExpanded = expandedWeek === wk;
               const wkInsights = isExpanded ? generateWeeklyInsights(wk) : [];
+              const revRowLabel = getWeekRangeLabel(ws, now);
               return (
                 <div key={`${wk}-${intRefresh}`} style={{ background:'rgba(245,239,230,0.03)', border:`1px solid ${isExpanded?'rgba(196,113,79,0.18)':'rgba(245,239,230,0.07)'}`, borderRadius:'13px', marginBottom:'8px', overflow:'hidden', transition:'border-color 0.2s' }}>
                   {/* Accordion header */}
                   <button onClick={() => setExpandedWeek(isExpanded ? null : wk)}
                     style={{ width:'100%', display:'flex', alignItems:'center', justifyContent:'space-between', padding:'11px 12px', background:'none', border:'none', cursor:'pointer', textAlign:'left' }}>
                     <div style={{ display:'flex', alignItems:'center', gap:'8px', flexWrap:'wrap' }}>
-                      <span style={{ color:'rgba(245,239,230,0.38)', fontSize:'0.62rem', fontWeight:600, letterSpacing:'0.08em', textTransform:'uppercase', fontFamily:'Inter, sans-serif' }}>Wk of {label}</span>
+                      <span style={{ color:'rgba(245,239,230,0.38)', fontSize:'0.62rem', fontWeight:600, letterSpacing:'0.08em', textTransform:'uppercase', fontFamily:'Inter, sans-serif' }}>{revRowLabel}</span>
                       <span style={{ background:badge.bg, color:badge.color, borderRadius:'20px', padding:'2px 8px', fontSize:'0.62rem', fontFamily:'Inter, sans-serif', fontWeight:600 }}>{badge.label}</span>
                     </div>
                     <span style={{ color:'rgba(245,239,230,0.22)', fontSize:'0.72rem', flexShrink:0, marginLeft:'8px' }}>{isExpanded?'∨':'›'}</span>
